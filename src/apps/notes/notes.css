@@ -1,0 +1,23 @@
+.notes {
+  flex: 1;
+  min-height: 0;
+  background: #fff;
+  overflow: auto;
+}
+
+.notes__body {
+  margin: 0;
+  padding: 10px 14px;
+  font-family: 'Lucida Console', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #000;
+  white-space: pre-wrap;
+}
+
+.notes__body code {
+  font: inherit;
+  background: #ffe;
+  border: 1px solid #ddc;
+  padding: 0 3px;
+}

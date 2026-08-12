@@ -1,0 +1,85 @@
+.cork {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 14px;
+  padding: 10px 6px;
+}
+
+.cork__note {
+  position: relative;
+  padding: 20px 14px 16px;
+  transform: rotate(var(--tilt));
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.4);
+  transition: transform 120ms ease;
+}
+
+.cork__note:hover {
+  transform: rotate(0deg) translateY(-2px);
+  z-index: 2;
+}
+
+.cork__note h3 {
+  margin: 0 0 7px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cork__note p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+/* The pin, drawn as a small circle with a highlight. */
+.cork__pin {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cave-magenta);
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.35), 0 2px 2px rgba(0, 0, 0, 0.4);
+}
+
+.cork__note--paper {
+  background: #e8e0d0;
+  color: #2a2430;
+}
+
+.cork__note--yellow {
+  background: #f4d98c;
+  color: #3a2f14;
+}
+
+.cork__note--yellow .cork__pin {
+  background: var(--cave-cyan);
+}
+
+.cork__note--blue {
+  background: #a8c8e8;
+  color: #1d2a3a;
+}
+
+.cork__note--blue .cork__pin {
+  background: var(--cave-amber);
+}
+
+/* A "photo" reads as a polaroid: white border, weighted to the bottom. */
+.cork__note--photo {
+  background: #f2f2ef;
+  color: #2a2430;
+  padding-bottom: 26px;
+  border: 6px solid #f2f2ef;
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.45);
+}
+
+.cork__note--photo h3 {
+  background: linear-gradient(160deg, #4a3a5c, #2a2436);
+  color: #e8e0d0;
+  padding: 24px 10px;
+  text-align: center;
+  margin-bottom: 10px;
+}

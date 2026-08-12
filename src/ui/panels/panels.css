@@ -1,0 +1,213 @@
+.panel {
+  position: fixed;
+  top: 50%;
+  right: 46px;
+  transform: translateY(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  width: 440px;
+  max-height: min(760px, calc(100vh - 190px));
+  background: rgba(20, 16, 26, 0.96);
+  border: 3px solid var(--cave-paper);
+  box-shadow: 0 0 0 3px var(--cave-black), 10px 10px 0 rgba(0, 0, 0, 0.4);
+  /* No `both` fill-mode on purpose. With a fill mode the panel adopts the
+     keyframe's `opacity: 0` whenever the animation is not actively running —
+     so an animation that never starts, or is interrupted partway, leaves the
+     panel permanently invisible with no error. Without it, the resting state
+     is the element's own styles and the animation is pure decoration. */
+  opacity: 1;
+  animation: panel-in 180ms steps(4);
+}
+
+.panel--wide {
+  width: min(980px, calc(100vw - 92px));
+  /* An explicit height, not just a max. Wide panels hold content that sizes
+     itself with `height: 100%`, which resolves to `auto` against a
+     max-height-only parent — the content then collapses to its own intrinsic
+     height and anything absolutely positioned inside it spills out. */
+  height: min(660px, calc(100vh - 150px));
+  max-height: calc(100vh - 150px);
+  right: 50%;
+  transform: translate(50%, -50%);
+}
+
+.panel--tall {
+  width: 520px;
+  max-height: calc(100vh - 160px);
+}
+
+.panel__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--cave-wall);
+  border-bottom: 3px solid var(--cave-paper);
+}
+
+.panel__title {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--cave-amber);
+}
+
+.panel__subtitle {
+  margin: 5px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(232, 224, 208, 0.55);
+}
+
+.panel__close {
+  flex: none;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  color: var(--cave-paper);
+  background: transparent;
+  border: 2px solid rgba(232, 224, 208, 0.45);
+  cursor: pointer;
+}
+
+.panel__close:hover {
+  background: var(--cave-magenta);
+  border-color: var(--cave-paper);
+}
+
+.panel__body {
+  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.panel__loading {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: rgba(232, 224, 208, 0.5);
+}
+
+/* The PC panel supplies its own chrome, so it drops the frame padding. */
+.panel--wide .panel__body {
+  padding: 0;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Scrollbars ---------------------------------------------------------------- */
+
+.panel__body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.panel__body::-webkit-scrollbar-track {
+  background: var(--cave-black);
+}
+
+.panel__body::-webkit-scrollbar-thumb {
+  background: var(--cave-wall-lit);
+  border: 2px solid var(--cave-black);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* --wide is horizontally centred, so it needs its own keyframes to avoid
+   fighting the translate on the base class. */
+.panel--wide {
+  animation-name: panel-in-wide;
+}
+
+@keyframes panel-in-wide {
+  from {
+    opacity: 0;
+    transform: translate(50%, -50%) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(50%, -50%) scale(1);
+  }
+}
+
+/* The monitor's glass -------------------------------------------------------- */
+
+/* Positioned entirely from JS: <MonitorProjector> reports where the screen
+   mesh projects to and <PcPanel> writes transform/width/height. The resting
+   styles here only have to be true before the first frame arrives. */
+.crt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  /* Under the narrator (40) and the room chrome (45): the way back out has to
+     stay reachable while the desktop is up. */
+  z-index: 34;
+  overflow: hidden;
+  visibility: hidden;
+  /* The screen's own light spilling onto the bezel — the cheapest thing that
+     welds a crisp DOM layer to the pixelated render behind it. */
+  box-shadow: 0 0 26px rgba(96, 160, 220, 0.3);
+}
+
+.crt > .xp {
+  height: 100%;
+}
+
+.crt__glass,
+.crt__flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.crt__glass {
+  /* Scanlines on a 3px pitch — fine enough to read as a tube, coarse enough to
+     survive the visitor's own display scaling. */
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.17) 0 1px,
+    transparent 1px 3px
+  );
+  /* Curvature without a shader: darkened corners plus a cool centre bloom. */
+  box-shadow:
+    inset 0 0 34px rgba(0, 0, 0, 0.5),
+    inset 0 0 90px rgba(40, 80, 140, 0.22);
+}
+
+/* "The monitor flickers to life." No fill mode, for the reason spelled out on
+   .panel: the resting state is invisible, and the animation is pure
+   decoration that cannot strand the element in a keyframe's opacity. */
+.crt__flash {
+  opacity: 0;
+  background: linear-gradient(180deg, transparent 0%, #dff2ff 50%, transparent 100%);
+  animation: crt-power-on 280ms steps(5);
+}
+
+@keyframes crt-power-on {
+  0% {
+    opacity: 0.95;
+    transform: scaleY(0.02);
+  }
+  60% {
+    opacity: 0.5;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}

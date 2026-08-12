@@ -1,0 +1,87 @@
+.contra {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0f;
+  font-family: 'Perfect DOS VGA 437', 'Courier New', monospace;
+}
+
+.contra__hud {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #f0a848;
+  background: #14101a;
+  border-bottom: 2px solid #2a2436;
+}
+
+.contra__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.contra__canvas {
+  image-rendering: pixelated;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.contra__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 9px;
+  background: rgba(10, 10, 15, 0.9);
+  text-align: center;
+}
+
+.contra__title {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0.2em;
+  color: #d64f9a;
+  text-shadow: 2px 2px 0 #14101a;
+}
+
+.contra__score {
+  margin: 0;
+  font-size: 14px;
+  color: #f0a848;
+}
+
+.contra__button {
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  padding: 8px 22px;
+  color: #14101a;
+  background: #f0a848;
+  border: none;
+  cursor: pointer;
+}
+
+.contra__button:hover {
+  background: #ffc46a;
+}
+
+.contra__hint {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(232, 224, 208, 0.6);
+}
+
+.contra__scope {
+  margin: 0;
+  font-size: 10px;
+  color: rgba(232, 224, 208, 0.32);
+}

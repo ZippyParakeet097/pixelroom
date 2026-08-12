@@ -1,0 +1,36 @@
+/* The whiteboard's face ------------------------------------------------------
+   Positioned entirely from JS: <SurfaceProjector> reports where the board's
+   plane projects to and <WhiteboardPanel> writes transform/width/height. The
+   resting styles here only have to be true before the first frame arrives. */
+
+.board-ink {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  /* Same layer as the other two pasted surfaces: under the narrator (40) and
+     the room chrome (45), so the way back out stays reachable. */
+  z-index: 34;
+  visibility: hidden;
+
+  /* Ink, not light. Multiplying against the backdrop means the strokes take the
+     room's lighting off the rendered board underneath — the same dim wash the
+     baked doodles already sit in — instead of glowing at full brightness on a
+     surface that is nowhere near white in this room. The blend has to live on
+     this element rather than on the canvas: the transform below makes a
+     stacking context, and a canvas inside it would have nothing to blend with. */
+  mix-blend-mode: multiply;
+}
+
+/* One layer covering the whole face, holding everything written on the board —
+   the notes that were already there and the visitor's own strokes alike. */
+.board-ink__layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Drawn at roughly one pixel per centimetre of board and blown up, so a
+     stroke lands on blocks about the size of the room's own. See INK. */
+  image-rendering: pixelated;
+}

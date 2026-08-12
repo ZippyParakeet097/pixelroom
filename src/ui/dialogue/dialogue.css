@@ -1,0 +1,108 @@
+.dialogue {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  width: min(880px, calc(100vw - 96px));
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* Above the chrome buttons (45) so a locked line really does own the screen;
+   the box itself is lifted one step further so it stays clickable. */
+.dialogue-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  /* Deliberately invisible: this is a flow guard, not a modal backdrop. */
+  background: transparent;
+  cursor: default;
+}
+
+.dialogue-scrim--ready {
+  cursor: pointer;
+}
+
+.dialogue--locked {
+  z-index: 51;
+}
+
+.dialogue__box {
+  position: relative;
+  padding: 20px 26px 22px;
+  background: rgba(20, 16, 26, 0.94);
+  pointer-events: auto;
+  cursor: pointer;
+  /* Same reasoning as the panels: the entrance must not be load-bearing for
+     visibility. */
+  opacity: 1;
+  animation: dialogue-in 140ms steps(3);
+}
+
+.dialogue__box:focus-visible {
+  outline: 2px solid var(--cave-amber);
+  outline-offset: 4px;
+}
+
+/* Hover flavour auto-dismisses, so it shouldn't look clickable. */
+.dialogue--transient .dialogue__box {
+  cursor: default;
+  opacity: 0.92;
+  background: rgba(20, 16, 26, 0.82);
+}
+
+.dialogue__text {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.65;
+  letter-spacing: 0.02em;
+  color: var(--cave-paper);
+  /* Reserve two lines so the box doesn't resize mid-sentence. */
+  min-height: 2lh;
+}
+
+.dialogue__caret {
+  color: var(--cave-cyan);
+  animation: caret-blink 640ms steps(1, end) infinite;
+}
+
+.dialogue__continue {
+  position: absolute;
+  right: 16px;
+  bottom: 8px;
+  font-size: 13px;
+  color: var(--cave-amber);
+  animation: nudge 900ms steps(2, end) infinite;
+}
+
+@keyframes dialogue-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}

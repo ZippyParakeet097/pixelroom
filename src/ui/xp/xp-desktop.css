@@ -1,0 +1,247 @@
+.xp {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #3a6ea5;
+  font-family: 'Pixelated MS Sans Serif', Tahoma, sans-serif;
+  /* Double-clicking an icon or a game's start button otherwise selects the
+     label text and leaves it highlighted. Text that should stay selectable —
+     the terminal's scrollback, the résumé — opts back in below. */
+  user-select: none;
+}
+
+.xp .term__scroll,
+.xp .resume__page,
+.xp .notes__body {
+  user-select: text;
+}
+
+.xp__desktop {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* XP's Bliss, reduced to a gradient — a photographic wallpaper would fight
+     the pixel aesthetic and cost a texture download. */
+  background:
+    linear-gradient(180deg, #3a6ea5 0%, #5b9bd5 42%, #7cb342 42%, #558b2f 100%);
+}
+
+.xp__icons {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 92px;
+}
+
+.xp__icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 68px;
+  padding: 6px 2px;
+  font: inherit;
+  font-size: 10px;
+  color: #fff;
+  background: transparent;
+  border: 1px dotted transparent;
+  cursor: pointer;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.7);
+}
+
+.xp__icon.is-selected {
+  background: rgba(49, 106, 197, 0.55);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.xp__icon-glyph {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  background: rgba(20, 16, 26, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.xp__icon-label {
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.xp__hint {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  margin: 0;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* Windows ------------------------------------------------------------------- */
+
+.xp-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+}
+
+.xp-window--blurred .title-bar {
+  filter: saturate(0.45) brightness(0.9);
+}
+
+.xp-window__body {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.xp-window__loading {
+  margin: auto;
+  font-size: 11px;
+  color: #444;
+}
+
+/* Taskbar ------------------------------------------------------------------- */
+
+.xp-taskbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px 0 0;
+  background: linear-gradient(180deg, #245edb 0%, #3f8cf3 9%, #245edb 18%, #245edb 92%, #1941a5 100%);
+  border-top: 1px solid #1941a5;
+}
+
+.xp-start-button {
+  height: 100%;
+  padding: 0 22px 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, #5eac56 0%, #3f8e37 50%, #2f7c2a 100%);
+  border: none;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+}
+
+.xp-start-button.is-open,
+.xp-start-button:hover {
+  filter: brightness(1.12);
+}
+
+.xp-taskbar__items {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.xp-taskbar__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 150px;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #3c81f3;
+  border: 1px solid #2b6cd4;
+  cursor: pointer;
+}
+
+.xp-taskbar__item.is-active {
+  background: #1e52b7;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.xp-taskbar__tray {
+  flex: none;
+  padding: 0 10px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(180deg, #14a0e4 0%, #1a8fd0 50%, #0f76b4 100%);
+  border-left: 1px solid #1941a5;
+}
+
+/* Start menu ---------------------------------------------------------------- */
+
+.xp-start {
+  position: absolute;
+  left: 0;
+  bottom: 30px;
+  z-index: 9999;
+  width: 210px;
+  background: #fff;
+  border: 2px solid #245edb;
+  border-bottom: none;
+  box-shadow: 3px -3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.xp-start__banner {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(180deg, #1c60d4 0%, #3f8cf3 100%);
+}
+
+.xp-start__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.xp-start__list button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  color: #000;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.xp-start__list button:hover {
+  color: #fff;
+  background: #316ac5;
+}
+
+.xp-start__glyph {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  background: #1d1826;
+}

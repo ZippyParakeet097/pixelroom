@@ -1,0 +1,81 @@
+.snake {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  font-family: 'Perfect DOS VGA 437', 'Courier New', monospace;
+}
+
+.snake__hud {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 12px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #8ce87a;
+  background: #0d1b0f;
+  border-bottom: 2px solid #2a4a2f;
+}
+
+.snake__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+}
+
+.snake__canvas {
+  image-rendering: pixelated;
+  border: 2px solid #2a4a2f;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.snake__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: rgba(13, 27, 15, 0.88);
+  text-align: center;
+}
+
+.snake__title {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: #8ce87a;
+}
+
+.snake__score {
+  margin: 0;
+  font-size: 13px;
+  color: #d64f9a;
+}
+
+.snake__button {
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  padding: 8px 20px;
+  color: #0d1b0f;
+  background: #8ce87a;
+  border: none;
+  cursor: pointer;
+}
+
+.snake__button:hover {
+  background: #b4f5a6;
+}
+
+.snake__hint {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(140, 232, 122, 0.5);
+}

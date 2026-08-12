@@ -1,0 +1,102 @@
+.contact__blurb {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(232, 224, 208, 0.75);
+}
+
+.contact__list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact__link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: var(--cave-paper);
+  background: var(--cave-wall);
+  border: 2px solid transparent;
+}
+
+.contact__link:hover,
+.contact__link:focus-visible {
+  background: var(--cave-wall-lit);
+  border-color: var(--cave-cyan);
+  outline: none;
+}
+
+/* The chip behind the mark.
+ *
+ * Paper rather than the cyan it used to be, because it now carries real brand
+ * marks: the Octocat is published as black artwork and the LinkedIn bug as blue
+ * on white, and both owners' guidelines put them on a light field. Dropping them
+ * on a saturated cyan tile would be off-brand and, in the Octocat's case,
+ * near-invisible. A light chip is also the closest thing this panel has to a
+ * sticker, which is the right metaphor for a logo pasted next to a link. */
+.contact__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  color: var(--cave-black);
+  background: var(--cave-paper);
+}
+
+/* Sized per brand rather than with one shared box, for two reasons.
+ *
+ * The files have different aspect ratios — the LinkedIn download carries its ®
+ * outside the blue square — so a shared square box would letterbox the bug and
+ * render it smaller than the Octocat beside it. And even once their heights
+ * match, a solid square still reads larger than a circle of the same height, so
+ * the bug is stepped down a further couple of pixels. These numbers are set by
+ * eye against each other, not by arithmetic. */
+.contact__brand {
+  display: block;
+}
+
+.contact__brand--github {
+  width: 19px;
+  height: 19px;
+}
+
+.contact__brand--linkedin {
+  width: 20px;
+  height: 17px;
+}
+
+.contact__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.contact__label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(232, 224, 208, 0.5);
+}
+
+.contact__value {
+  font-size: 13px;
+}
+
+.contact__arrow {
+  color: var(--cave-amber);
+}
+
+.contact__resume {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}

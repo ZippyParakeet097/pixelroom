@@ -1,0 +1,113 @@
+/* Shelf navigation ----------------------------------------------------------
+   The shelf itself is the control, so there is no panel here — only the hint
+   and a row list that exists for keyboard and screen-reader visitors. */
+
+.shelf-nav {
+  position: fixed;
+  right: 46px;
+  bottom: 132px;
+  z-index: 35;
+}
+
+/* Off-screen rather than display:none — a hidden element cannot be focused,
+   and being focusable is this list's entire job. Focus is still visible: it
+   lights the matching row of the actual shelf, out in the room. */
+.shelf-nav__rows {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  list-style: none;
+}
+
+/* Backed rather than bare text: this floats over whatever the shelf camera
+   happens to frame behind it — the lit monitor, in practice — and unbacked
+   low-contrast type disappears against it. */
+.shelf-nav__hint {
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(232, 224, 208, 0.72);
+  background: rgba(20, 16, 26, 0.88);
+  border: 1px solid rgba(232, 224, 208, 0.18);
+  animation: shelf-hint-in 260ms steps(4);
+}
+
+.shelf-nav__key {
+  color: var(--cave-amber);
+}
+
+@keyframes shelf-hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Case study view ----------------------------------------------------------- */
+
+.case__back {
+  margin-bottom: 18px;
+}
+
+.case__summary {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--cave-paper);
+}
+
+.case__stack {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.case__stack li {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  color: var(--cave-cyan);
+  border: 1px solid rgba(79, 214, 200, 0.4);
+}
+
+.case__section {
+  margin-bottom: 20px;
+}
+
+.case__section h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--cave-amber);
+}
+
+.case__section p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(232, 224, 208, 0.78);
+}
+
+.case__links {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.case__links a {
+  text-decoration: none;
+}

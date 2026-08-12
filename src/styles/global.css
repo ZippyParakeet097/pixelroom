@@ -1,0 +1,105 @@
+:root {
+  /* Room palette — every material and every piece of UI pulls from this list so
+     the 3D scene and the DOM overlays stay in the same colour world. */
+  --cave-black: #14101a;
+  --cave-ink: #1d1826;
+  --cave-wall: #2c2436;
+  --cave-wall-lit: #3a2f47;
+  --cave-floor: #4a3a2e;
+  --cave-wood: #6b4f38;
+  --cave-wood-dark: #4a3627;
+  --cave-cyan: #4fd6c8;
+  --cave-magenta: #d64f9a;
+  --cave-amber: #f0a848;
+  --cave-paper: #e8e0d0;
+
+  --dialogue-border: #e8e0d0;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--cave-black);
+}
+
+body {
+  font-family: 'Courier New', ui-monospace, monospace;
+  color: var(--cave-paper);
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+canvas {
+  display: block;
+  /* The render target is already low-res; this keeps the browser from
+     re-smoothing it if the backing store and CSS size ever disagree. */
+  image-rendering: pixelated;
+}
+
+/* Shared pixel-UI primitives ------------------------------------------------ */
+
+.pixel-panel {
+  background: var(--cave-ink);
+  border: 3px solid var(--dialogue-border);
+  box-shadow: 0 0 0 3px var(--cave-black);
+}
+
+.pixel-button {
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cave-paper);
+  background: var(--cave-wall);
+  border: 2px solid var(--cave-paper);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.pixel-button:hover {
+  background: var(--cave-wall-lit);
+  color: var(--cave-amber);
+}
+
+.pixel-button:active {
+  transform: translateY(1px);
+}
+
+.pixel-button[aria-pressed='true'] {
+  background: var(--cave-amber);
+  color: var(--cave-black);
+}
+
+/* Utility ------------------------------------------------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
