@@ -1,4 +1,4 @@
-# man cave
+# pixelroom
 
 A portfolio arranged as a room. Real 3D low-poly geometry rendered through a
 pixel-art post-process, viewed from a fixed isometric angle. Clicking an object

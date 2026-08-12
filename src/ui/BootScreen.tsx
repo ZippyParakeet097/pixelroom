@@ -60,7 +60,7 @@ export function BootScreen() {
     <div className={`boot ${stage === 'room' ? 'boot--leaving' : ''}`}>
       <div className="boot__inner">
         <p className="boot__kicker">harshil prakash · a portfolio, arranged as a room</p>
-        <h1 className="boot__title">MAN CAVE</h1>
+        <h1 className="boot__title">PIXELROOM</h1>
         <button type="button" className="boot__enter" onClick={handleEnter} autoFocus>
           ▸ open the door
         </button>

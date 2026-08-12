@@ -40,7 +40,7 @@ export function Taskbar() {
     <>
       {startOpen && (
         <div className="xp-start">
-          <div className="xp-start__banner">man cave</div>
+          <div className="xp-start__banner">pixelroom</div>
           <ul className="xp-start__list">
             {DESKTOP_ICON_ORDER.map((appId) => (
               <li key={appId}>

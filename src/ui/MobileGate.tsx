@@ -13,7 +13,7 @@ export function MobileGate() {
   return (
     <div className="gate">
       <div className="gate__inner">
-        <p className="gate__kicker">Harshil Prakash · man cave</p>
+        <p className="gate__kicker">Harshil Prakash · pixelroom</p>
         <h1 className="gate__title">This one&rsquo;s built for a bigger screen.</h1>
         <p className="gate__body">
           There&rsquo;s a whole room in here — a PC you can actually use, a jukebox, a

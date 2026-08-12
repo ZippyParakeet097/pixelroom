@@ -1,4 +1,4 @@
-# Man-Cave Portfolio — Project Plan
+# pixelroom — Project Plan
 
 ## How to use this document
 

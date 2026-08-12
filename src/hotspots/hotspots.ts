@@ -279,6 +279,6 @@ export function cameraFor(focused: HotspotId | null, shelfProject: string | null
 }
 
 export const INTRO_LINES = [
-  "Where am I? ...huh. Is this what they call a 'man cave'?",
+  "Where am I? ...huh. Everything's a little... chunky. Low-poly. Like I'm rendered at half resolution.",
   'Nothing here moves unless you touch it. Go ahead.',
 ]
