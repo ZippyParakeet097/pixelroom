@@ -1,0 +1,21 @@
+.mp-engagement {
+  margin-top: 14px;
+  padding-left: 14px;
+  border-left: 2px solid var(--mp-line);
+}
+
+.mp-engagement__head {
+  margin: 0 0 8px;
+  font-family: var(--mp-font-mono);
+  font-size: 0.75rem;
+}
+
+.mp-engagement__client {
+  font-weight: 600;
+  color: var(--mp-ink);
+}
+
+.mp-engagement__context {
+  margin-left: 8px;
+  color: var(--mp-ink-soft);
+}

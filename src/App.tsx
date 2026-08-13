@@ -2,18 +2,19 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import { BootScreen } from './ui/BootScreen'
 import { DialogueBox } from './ui/dialogue/DialogueBox'
 import { RoomChrome } from './ui/RoomChrome'
-import { MobileGate } from './ui/MobileGate'
+import { MobilePortfolio } from './mobile/MobilePortfolio'
 import { useRoomStore } from './state/useRoomStore'
 import { playSfx } from './audio/sfx'
 
-/** Below this CSS width the 3D room is replaced by the résumé gate (plan §10). */
+/** Below this CSS width the 3D room is replaced by the mobile portfolio page (plan §10). */
 const MIN_WIDTH = 1024
 
 /**
  * The 3D scene is lazy so that three.js — by far the largest thing here — is
- * never fetched on a viewport that will only ever see the résumé gate. A
- * static import would put it in the entry chunk and every phone visitor would
- * pay ~190 KB gzip to download a renderer the gate never mounts (plan §9, §10).
+ * never fetched on a viewport that will only ever see the mobile portfolio
+ * page. A static import would put it in the entry chunk and every phone
+ * visitor would pay ~190 KB gzip to download a renderer the page never mounts
+ * (plan §9, §10).
  */
 const Scene = lazy(() => import('./scene/Scene').then((m) => ({ default: m.Scene })))
 
@@ -77,7 +78,7 @@ export function App() {
   const stage = useRoomStore((s) => s.stage)
   useEscapeToHome()
 
-  if (!isDesktop) return <MobileGate />
+  if (!isDesktop) return <MobilePortfolio />
 
   return (
     <>

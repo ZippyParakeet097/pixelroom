@@ -1,0 +1,69 @@
+.mp-contact__blurb {
+  margin: 0 0 24px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--mp-ink-soft);
+}
+
+.mp-contact__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mp-contact__link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px;
+  color: var(--mp-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--mp-line);
+  transition: color 150ms ease;
+}
+
+.mp-contact__list li:first-child .mp-contact__link {
+  border-top: 1px solid var(--mp-line);
+}
+
+.mp-contact__link:hover {
+  color: var(--mp-accent);
+}
+
+.mp-contact__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  font-size: 1.1rem;
+  color: var(--mp-ink-soft);
+}
+
+.mp-contact__mark img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mp-contact__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-contact__label {
+  font-family: var(--mp-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mp-ink-soft);
+}
+
+.mp-contact__value {
+  font-size: 0.9rem;
+}
+
+.mp-contact__arrow {
+  flex: none;
+  color: var(--mp-ink-soft);
+}

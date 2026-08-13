@@ -1,0 +1,126 @@
+.mp-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mp-card {
+  padding: 20px;
+  border: 1px solid var(--mp-line);
+  border-radius: 4px;
+  background: var(--mp-paper-raised);
+}
+
+.mp-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.mp-card__head h3 {
+  margin: 0;
+  font-family: var(--mp-font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.mp-card__year {
+  flex: none;
+  font-family: var(--mp-font-mono);
+  font-size: 0.75rem;
+  color: var(--mp-ink-soft);
+}
+
+.mp-card__role {
+  margin: 3px 0 12px;
+  font-size: 0.8125rem;
+  color: var(--mp-ink-soft);
+}
+
+.mp-chips {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mp-chips li {
+  padding: 3px 8px;
+  font-family: var(--mp-font-mono);
+  font-size: 0.6875rem;
+  color: var(--mp-ink-soft);
+  border: 1px solid var(--mp-line);
+  border-radius: 3px;
+}
+
+.mp-card__summary {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.mp-card__toggle {
+  display: block;
+  margin-top: 14px;
+  padding: 0;
+  font-family: var(--mp-font-mono);
+  font-size: 0.8125rem;
+  color: var(--mp-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.mp-card__toggle:hover {
+  text-decoration: underline;
+}
+
+.mp-card__collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 260ms ease;
+}
+
+.mp-card__collapsible[data-expanded='true'] {
+  grid-template-rows: 1fr;
+}
+
+.mp-card__collapsible-inner {
+  overflow: hidden;
+}
+
+.mp-card__detail {
+  margin-top: 18px;
+}
+
+.mp-card__detail h4 {
+  margin: 0 0 6px;
+  font-family: var(--mp-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mp-ink-soft);
+}
+
+.mp-card__detail p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.mp-card__links {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mp-card__links a {
+  font-size: 0.8125rem;
+  color: var(--mp-accent);
+}
