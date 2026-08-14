@@ -5,6 +5,8 @@ import { PALETTE, makeGlowMaterial, makeMaterial } from './palette'
 import { DOOR_GRID, PLATE_RECT, namePlateFaceTexture, namePlateTexture } from './textures'
 import { Block, PickProxy } from './primitives'
 import { PixelationPass } from './PixelationPass'
+import { ArecaPalm } from './ArecaPalm'
+import { Sneakers } from './Sneakers'
 import { AJAR, doorTimeline, latchAngle, pushProgress, swingAngle } from './doorSequence'
 import { advanceStorm, createStorm } from './lightning'
 import { prefersReducedMotion } from './motion'
@@ -252,7 +254,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
 
   const materials = useMemo(
     () => ({
-      wall: makeMaterial('#2a2334'),
+      /* Authored light, like everything else here — pass squares it on the way
+         out, so a small nudge up top is a big one on screen. */
+      wall: makeMaterial('#4a3f5e'),
       /* A slim painted casing, a shade lighter than the wall and standing a
          couple of centimetres proud. Tried the modern thing of a dark shadow
          gap first: on a wall this dark it is invisible, and the leaf reads as a
@@ -637,6 +641,13 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           <planeGeometry args={[3.4, 3.8]} />
         </mesh>
       </group>
+
+      {/* Palm on the hinge side, shoes on the latch side. Deliberately not a
+          matched pair: one side is tall and tended, the other is something
+          somebody dropped on the way in, and the asymmetry is what stops the
+          doorway reading as a stage set. */}
+      <ArecaPalm />
+      <Sneakers />
 
       {/* Threshold strip, on the near side of the opening only. Run through the
           middle it would sit under the undercut and cap the line of light that
