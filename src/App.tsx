@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import { DoorIntro } from './ui/DoorIntro'
 import { DialogueBox } from './ui/dialogue/DialogueBox'
 import { RoomChrome } from './ui/RoomChrome'
-import { MobilePortfolio } from './mobile/MobilePortfolio'
 import { useRoomStore } from './state/useRoomStore'
 import { playSfx } from './audio/sfx'
 
@@ -20,6 +19,16 @@ const Scene = lazy(() => import('./scene/Scene').then((m) => ({ default: m.Scene
 
 const HotspotPanels = lazy(() =>
   import('./ui/panels/HotspotPanels').then((m) => ({ default: m.HotspotPanels })),
+)
+
+/**
+ * Lazy for the mirror of the reason <Scene> is: the two viewports share nothing
+ * but this file. Static, it put five components and five stylesheets into the
+ * entry chunk that a desktop visitor never renders. The door stays static —
+ * it's the desktop first paint, and a round trip in front of it buys nothing.
+ */
+const MobilePortfolio = lazy(() =>
+  import('./mobile/MobilePortfolio').then((m) => ({ default: m.MobilePortfolio })),
 )
 
 function useIsDesktop(): boolean {
@@ -93,7 +102,12 @@ export function App() {
   useEscapeToHome()
   usePrefetchScene(isDesktop)
 
-  if (!isDesktop) return <MobilePortfolio />
+  if (!isDesktop)
+    return (
+      <Suspense fallback={null}>
+        <MobilePortfolio />
+      </Suspense>
+    )
 
   return (
     <>

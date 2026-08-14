@@ -127,13 +127,32 @@ function MarkerTray() {
   const raise = useRef(tools.map(() => 0))
   const glow = useRef(tools.map(() => 0))
 
+  /**
+   * Whether anything is still travelling toward its goal.
+   *
+   * The loop ran every frame of the whole session for a tray only reachable at
+   * one hotspot. Can't just gate on `live` though: leaving is exactly when a
+   * held marker has to drop back, and cutting the loop then freezes it raised
+   * for the next visit. So the goals stay in charge — any input change starts
+   * it stepping again, and it stops itself once everything has arrived.
+   */
+  const settling = useRef(true)
+
+  useEffect(() => {
+    settling.current = true
+  }, [live, held, hovered])
+
   useFrame((_, delta) => {
+    if (!live && !settling.current) return
+
+    let moving = false
     tools.forEach((tool, index) => {
       const isHeld = held === tool.id
       const raiseGoal = isHeld ? 1 : hovered === tool.id ? 0.14 : 0
       const glowGoal = isHeld || hovered === tool.id ? 1 : 0
 
       if (Math.abs(raise.current[index] - raiseGoal) > 0.001) {
+        moving = true
         const value = THREE.MathUtils.damp(raise.current[index], raiseGoal, TOOL_SPEED, delta)
         raise.current[index] = value
         const group = groups.current[index]
@@ -144,11 +163,13 @@ function MarkerTray() {
       }
 
       if (Math.abs(glow.current[index] - glowGoal) > 0.001) {
+        moving = true
         const value = THREE.MathUtils.damp(glow.current[index], glowGoal, TOOL_SPEED, delta)
         glow.current[index] = value
         tool.main.emissive.copy(tool.glow).multiplyScalar(TOOL_REST_GLOW + value * TOOL_LIVE_GLOW)
       }
     })
+    settling.current = moving
   })
 
   // R3F fires no pointerout for a proxy that unmounts under the cursor, so

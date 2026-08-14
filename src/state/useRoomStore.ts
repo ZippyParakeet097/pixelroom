@@ -2,6 +2,11 @@ import { create } from 'zustand'
 import { HOTSPOTS, INTRO_LINES } from '@/hotspots/hotspots'
 import type { HotspotId } from '@/hotspots/types'
 import { PROJECTS } from '@/content/projects'
+// Static on purpose. Was `void import(...)` in five places — but <DialogueBox>
+// is a static import in <App>, so this module already sat in the entry chunk.
+// Split bought nothing, cost a microtask per hover, and let state move between
+// the set() and the line. It reads only zustand, so no cycle.
+import { useDialogueStore } from './useDialogueStore'
 
 /**
  * The opening sequence, one beat per value.
@@ -134,9 +139,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     // Locked: the room shouldn't be touchable while the narrator is still
     // setting the scene — a hotspot click landing mid-intro interrupts its own
     // introduction (plan §8).
-    void import('./useDialogueStore').then(({ useDialogueStore }) => {
-      useDialogueStore.getState().say(INTRO_LINES, { lock: true })
-    })
+    useDialogueStore.getState().say(INTRO_LINES, { lock: true })
   },
 
   focusHotspot: (id) => {
@@ -165,17 +168,13 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       monitorOn: get().monitorOn || id === 'pc',
     })
 
-    void import('./useDialogueStore').then(({ useDialogueStore }) => {
-      useDialogueStore.getState().say(lines, { interrupt: true })
-    })
+    useDialogueStore.getState().say(lines, { interrupt: true })
   },
 
   returnHome: () => {
     if (get().focused === null) return
     set({ focused: null, hovered: null, shelfProject: null, shelfCursor: null, cameraSettled: false })
-    void import('./useDialogueStore').then(({ useDialogueStore }) => {
-      useDialogueStore.getState().clear()
-    })
+    useDialogueStore.getState().clear()
   },
 
   stepBack: () => {
@@ -207,15 +206,13 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       cameraSettled: false,
     })
 
-    void import('./useDialogueStore').then(({ useDialogueStore }) => {
-      if (!project) {
-        useDialogueStore.getState().clear()
-        return
-      }
-      useDialogueStore
-        .getState()
-        .say([`You slide ${project.title} off the shelf.`], { interrupt: true, transient: true })
-    })
+    if (!project) {
+      useDialogueStore.getState().clear()
+      return
+    }
+    useDialogueStore
+      .getState()
+      .say([`You slide ${project.title} off the shelf.`], { interrupt: true, transient: true })
   },
 
   setMonitorOn: (on) => {
@@ -255,18 +252,16 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       return
     }
 
-    void import('./useDialogueStore').then(({ useDialogueStore }) => {
-      // Ambient: a pointer that drifts across three hotspots on its way
-      // somewhere shouldn't fire three lines, and shouldn't cut off the one
-      // that's still being read.
-      const spoke = useDialogueStore.getState().say([line], { transient: true, ambient: true })
-      if (!spoke) return
-      // The latch only closes on a line that actually played, so one the
-      // narrator was too busy to deliver is still waiting the next time the
-      // pointer comes past.
-      set({ hoverLinesPlayed: new Set(get().hoverLinesPlayed).add(id) })
-      reveal()
-    })
+    // Ambient: a pointer that drifts across three hotspots on its way
+    // somewhere shouldn't fire three lines, and shouldn't cut off the one
+    // that's still being read.
+    const spoke = useDialogueStore.getState().say([line], { transient: true, ambient: true })
+    if (!spoke) return
+    // The latch only closes on a line that actually played, so one the
+    // narrator was too busy to deliver is still waiting the next time the
+    // pointer comes past.
+    set({ hoverLinesPlayed: new Set(get().hoverLinesPlayed).add(id) })
+    reveal()
   },
 
   setCameraSettled: (settled) => set({ cameraSettled: settled }),
