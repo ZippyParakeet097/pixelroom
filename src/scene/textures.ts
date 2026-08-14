@@ -768,8 +768,3 @@ export function transportGlyphTexture(glyph: TransportGlyph): THREE.CanvasTextur
     triangle(10, 1, 6, -1)
   })
 }
-
-export function disposeTextures(): void {
-  cache.forEach((texture) => texture.dispose())
-  cache.clear()
-}

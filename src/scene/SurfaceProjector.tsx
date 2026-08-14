@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useRoomStore } from '@/state/useRoomStore'
 import type { HotspotId } from '@/hotspots/types'
@@ -70,16 +70,48 @@ export function SurfaceProjector({ id, plane, activeFor }: SurfaceProjectorProps
   }, [plane])
   const ndc = useMemo(() => new THREE.Vector3(), [])
 
+  /**
+   * Canvas rect, cached until something could have moved it.
+   *
+   * getBoundingClientRect force layout. Doing that every frame — while a DOM
+   * overlay animate over the same canvas — is the classic thrash. Rect only
+   * change on resize or scroll, so measure then, not per frame. Still never a
+   * stale *measured size*: this read the real box, just not 60 times a second.
+   */
+  const size = useThree((s) => s.size)
+  const rect = useRef<DOMRect | null>(null)
+  const stale = useRef(true)
+
+  useEffect(() => {
+    stale.current = true
+  }, [size])
+
+  useEffect(() => {
+    const invalidate = () => {
+      stale.current = true
+    }
+    window.addEventListener('resize', invalidate)
+    // Capture: a scrolling ancestor move the canvas without bubbling.
+    window.addEventListener('scroll', invalidate, true)
+    return () => {
+      window.removeEventListener('resize', invalidate)
+      window.removeEventListener('scroll', invalidate, true)
+    }
+  }, [])
+
   useFrame(({ camera, gl }) => {
     if (focused !== activeFor) {
       publishSurfaceRect(id, null)
+      // Re-measure on the way back in — layout may have moved while away.
+      stale.current = true
       return
     }
 
-    // The canvas's live bounding rect, for the same reason the pointer events
-    // in <Scene> use it: a measured size can lag the real layout, and here
-    // that would slide the overlay off the object.
-    const canvas = gl.domElement.getBoundingClientRect()
+    if (stale.current || !rect.current) {
+      rect.current = gl.domElement.getBoundingClientRect()
+      stale.current = false
+    }
+    const canvas = rect.current
 
     let minX = Infinity
     let minY = Infinity

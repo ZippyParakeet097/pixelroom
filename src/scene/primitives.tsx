@@ -5,6 +5,17 @@ import { getContactShadowTexture } from './palette'
 
 type Vec3 = [number, number, number]
 
+/**
+ * One box, one plane, scaled per instance.
+ *
+ * Inline `<boxGeometry args={size}>` mint fresh BufferGeometry per mesh — was
+ * 117 boxes, 117 geometries. Scale unit shape instead: one upload, one VAO,
+ * renderer reuse it across consecutive draws. Normals stay right under
+ * non-uniform scale — three build normal matrix from inverse transpose.
+ */
+const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1)
+const UNIT_PLANE = new THREE.PlaneGeometry(1, 1)
+
 interface BlockProps {
   size: Vec3
   position: Vec3
@@ -18,9 +29,14 @@ interface BlockProps {
  */
 export function Block({ size, position, rotation, material }: BlockProps) {
   return (
-    <mesh position={position} rotation={rotation} material={material} raycast={noRaycast}>
-      <boxGeometry args={size} />
-    </mesh>
+    <mesh
+      position={position}
+      rotation={rotation}
+      scale={size}
+      geometry={UNIT_BOX}
+      material={material}
+      raycast={noRaycast}
+    />
   )
 }
 
@@ -41,22 +57,21 @@ export function Block({ size, position, rotation, material }: BlockProps) {
 const DEBUG_PICKS =
   typeof location !== 'undefined' && new URLSearchParams(location.search).has('debugPicks')
 
-export function PickProxy({ size, position, rotation }: Omit<BlockProps, 'material'>) {
-  const material = useMemo(
-    () =>
-      DEBUG_PICKS
-        ? new THREE.MeshBasicMaterial({ color: '#ff00ff', wireframe: true, depthTest: false })
-        : new THREE.MeshBasicMaterial({
-            colorWrite: false,
-            depthWrite: false,
-          }),
-    [],
-  )
+/** Same for every proxy, and nothing mutates it. One material, not one per hotspot. */
+const PICK_MATERIAL = DEBUG_PICKS
+  ? new THREE.MeshBasicMaterial({ color: '#ff00ff', wireframe: true, depthTest: false })
+  : new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })
 
+export function PickProxy({ size, position, rotation }: Omit<BlockProps, 'material'>) {
   return (
-    <mesh position={position} rotation={rotation} material={material} renderOrder={-1}>
-      <boxGeometry args={size} />
-    </mesh>
+    <mesh
+      position={position}
+      rotation={rotation}
+      scale={size}
+      geometry={UNIT_BOX}
+      material={PICK_MATERIAL}
+      renderOrder={-1}
+    />
   )
 }
 
@@ -71,26 +86,36 @@ interface ContactShadowProps {
  * Painted contact shadow — the cheap stand-in for baked AO (plan §3.5).
  * One transparent quad, no shadow map, no extra light.
  */
+/** Blobs differ only by opacity. Share per level, not per object. */
+const shadowMaterials = new Map<number, THREE.MeshBasicMaterial>()
+
+function getShadowMaterial(opacity: number): THREE.MeshBasicMaterial {
+  const cached = shadowMaterials.get(opacity)
+  if (cached) return cached
+
+  const material = new THREE.MeshBasicMaterial({
+    map: getContactShadowTexture(),
+    transparent: true,
+    opacity,
+    depthWrite: false,
+  })
+  shadowMaterials.set(opacity, material)
+  return material
+}
+
 export function ContactShadow({ position, scale, opacity = 1 }: ContactShadowProps) {
-  const material = useMemo(() => {
-    return new THREE.MeshBasicMaterial({
-      map: getContactShadowTexture(),
-      transparent: true,
-      opacity,
-      depthWrite: false,
-    })
-  }, [opacity])
+  const material = useMemo(() => getShadowMaterial(opacity), [opacity])
 
   return (
     <mesh
       position={position}
       rotation={[-Math.PI / 2, 0, 0]}
+      scale={[scale[0], scale[1], 1]}
+      geometry={UNIT_PLANE}
       material={material}
       raycast={noRaycast}
       renderOrder={1}
-    >
-      <planeGeometry args={scale} />
-    </mesh>
+    />
   )
 }
 
@@ -103,8 +128,13 @@ interface PlaneProps {
 
 export function Panel({ size, position, rotation, material }: PlaneProps) {
   return (
-    <mesh position={position} rotation={rotation} material={material} raycast={noRaycast}>
-      <planeGeometry args={size} />
-    </mesh>
+    <mesh
+      position={position}
+      rotation={rotation}
+      scale={[size[0], size[1], 1]}
+      geometry={UNIT_PLANE}
+      material={material}
+      raycast={noRaycast}
+    />
   )
 }
