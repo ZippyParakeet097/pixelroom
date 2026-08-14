@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { noRaycast } from '@/hotspots/Hotspot'
 import { useRoomStore } from '@/state/useRoomStore'
+import { advanceStorm, createStorm } from '../lightning'
 import { PALETTE, makeGlowMaterial, makeMaterial } from '../palette'
 import { curtainTexture, lightShaftTexture, lightningFlashTexture } from '../textures'
 import { prefersReducedMotion } from '../motion'
@@ -55,24 +56,6 @@ const FLASH_LIGHT_PEAK = 11
 const FLASH_LIGHT_LEAK = 0.14
 
 /**
- * The flash is sampled on twos, and snapped to five brightness levels.
- *
- * A smoothly decaying flash is renderer language — it reads as a dimmer being
- * turned down, however fast you turn it. Hand-animated lightning in a 2D game
- * cuts between a handful of flat palettes at a low frame rate, and that stutter
- * is most of what makes it read as lightning rather than as illumination. It
- * also matches everything else here: the dialogue types in `steps(4)`, the
- * panels animate in `steps(5)`, and the pixelation pass posterises the whole
- * frame to 26 colour levels. A continuous flash was the one thing in the room
- * moving smoothly.
- *
- * Note this quantises the *sampling*, not the timeline — the bolts underneath
- * still advance every frame, so the stutter never drifts against the schedule.
- */
-const FLASH_FPS = 12
-const FLASH_LEVELS = 5
-
-/**
  * Append `?storm` to the URL to put the lightning on a two-second cycle.
  *
  * Same idea as `?debugPicks` in `primitives`: a strike lasts under half a
@@ -84,47 +67,6 @@ const STORM_DEBUG =
 
 const BURST_GAP = STORM_DEBUG ? { min: 1.1, max: 2.1 } : { min: 11, max: 26 }
 const FIRST_BURST = STORM_DEBUG ? 1 : 6
-
-interface Bolt {
-  start: number
-  peak: number
-  length: number
-}
-
-/**
- * One strike is two to four stabs in quick succession, the first the
- * brightest. A single clean fade reads as someone operating a dimmer; real
- * lightning stutters, and the stutter is most of what sells it.
- */
-function scheduleBurst(): { bolts: Bolt[]; end: number } {
-  const bolts: Bolt[] = []
-  const count = 2 + Math.floor(Math.random() * 3)
-  let at = 0
-  let end = 0
-  for (let i = 0; i < count; i++) {
-    const bolt = {
-      start: at,
-      peak: i === 0 ? 1 : 0.3 + Math.random() * 0.55,
-      length: 0.07 + Math.random() * 0.15,
-    }
-    bolts.push(bolt)
-    end = Math.max(end, bolt.start + bolt.length)
-    at += 0.05 + Math.random() * 0.17
-  }
-  return { bolts, end }
-}
-
-/** Envelope of a single stab: instant attack, squared decay. */
-function boltLevel(bolt: Bolt, elapsed: number): number {
-  const t = (elapsed - bolt.start) / bolt.length
-  if (t < 0 || t >= 1) return 0
-  const decay = 1 - t
-  return bolt.peak * decay * decay
-}
-
-function nextGap(): number {
-  return BURST_GAP.min + Math.random() * (BURST_GAP.max - BURST_GAP.min)
-}
 
 export function WindowDressing() {
   const curtainsOpen = useRoomStore((s) => s.curtainsOpen)
@@ -159,16 +101,7 @@ export function WindowDressing() {
   const light = useRef<THREE.DirectionalLight>(null)
 
   const open = useRef(0)
-  const storm = useRef({
-    untilNext: FIRST_BURST,
-    elapsed: 0,
-    end: 0,
-    bolts: [] as Bolt[],
-    /** Time owed to the next low-rate sample. */
-    sinceTick: 0,
-    /** Held between samples — this is what everything actually reads. */
-    level: 0,
-  })
+  const storm = useRef(createStorm(FIRST_BURST))
 
   // Read once. A flash is a hard brightness spike, which is exactly what a
   // visitor asking for reduced motion is asking not to be given, so under that
@@ -191,44 +124,11 @@ export function WindowDressing() {
     }
 
     // Lightning --------------------------------------------------------------
-    // The schedule runs at full rate; only the brightness read off it is held
-    // to FLASH_FPS, so the stutter never drifts against the bolts underneath.
-    const state = storm.current
-
-    if (calm) {
-      state.level = 0
-    } else if (state.bolts.length === 0) {
-      state.untilNext -= delta
-      if (state.untilNext <= 0) {
-        const burst = scheduleBurst()
-        state.bolts = burst.bolts
-        state.end = burst.end
-        state.elapsed = 0
-        state.untilNext = nextGap()
-      }
-    } else {
-      state.elapsed += delta
-      state.sinceTick += delta
-
-      if (state.sinceTick >= 1 / FLASH_FPS) {
-        state.sinceTick %= 1 / FLASH_FPS
-        let raw = 0
-        for (const bolt of state.bolts) raw = Math.max(raw, boltLevel(bolt, state.elapsed))
-        // Snap to flat plateaus. Rounding rather than flooring keeps the first
-        // sample of a strike at full brightness — a strike that opened one step
-        // down would lose its snap.
-        state.level = Math.round(raw * (FLASH_LEVELS - 1)) / (FLASH_LEVELS - 1)
-      }
-
-      if (state.elapsed > state.end) {
-        state.bolts = []
-        state.level = 0
-        state.sinceTick = 0
-      }
-    }
+    // Frozen rather than reset under reduced motion — a visitor who turns the
+    // setting off mid-storm should not come back to a strike still queued up.
+    const level = calm ? 0 : advanceStorm(storm.current, delta, BURST_GAP)
 
     // Drive ------------------------------------------------------------------
-    const level = state.level
     const lit = level > 0.002
     const shaftLevel = level * (1 - open.current)
 

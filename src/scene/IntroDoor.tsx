@@ -6,6 +6,7 @@ import { DOOR_GRID, PLATE_RECT, namePlateFaceTexture, namePlateTexture } from '.
 import { Block, PickProxy } from './primitives'
 import { PixelationPass } from './PixelationPass'
 import { AJAR, doorTimeline, latchAngle, pushProgress, swingAngle } from './doorSequence'
+import { advanceStorm, createStorm } from './lightning'
 import { prefersReducedMotion } from './motion'
 import { useRoomStore } from '@/state/useRoomStore'
 import { noRaycast } from '@/hotspots/Hotspot'
@@ -213,75 +214,20 @@ function makeSpillTexture(): THREE.Texture {
 }
 
 /**
- * One strike, as a curve: time in seconds against brightness.
+ * How long the weather waits between strikes — see `advanceStorm` for the
+ * burst itself, shared with the room's window.
  *
- * Lightning is not a fade in and out — it is two or three separate discharges
- * down the same channel, a few tens of milliseconds apart, and the flicker
- * between them is the whole tell. A single smooth pulse at this length reads as
- * a light being switched on, which is exactly what it must not read as.
+ * Sparse, and deliberately so. This is weather, not a light cue — it belongs
+ * to the scene rather than to anything the visitor did, so it has to be rare
+ * enough that catching one feels like luck.
  */
-const STRIKE: [number, number][] = [
-  [0, 0],
-  [0.03, 1],
-  [0.09, 0.16],
-  [0.14, 0.86],
-  [0.2, 0.07],
-  [0.26, 1],
-  [0.44, 0.28],
-  [0.66, 0.05],
-  [0.85, 0],
-]
-const STRIKE_LENGTH = STRIKE[STRIKE.length - 1][0]
-
-function strikeAt(t: number): number {
-  for (let i = 1; i < STRIKE.length; i++) {
-    const [time, level] = STRIKE[i]
-    if (t > time) continue
-    const [prevTime, prevLevel] = STRIKE[i - 1]
-    return THREE.MathUtils.lerp(prevLevel, level, (t - prevTime) / (time - prevTime))
-  }
-  return 0
-}
-
-interface Storm {
-  /** Seconds until the next strike, or `t >= 0` while one is running. */
-  wait: number
-  t: number
-}
-
+const STRIKE_GAP = { min: 9, max: 24 }
 /**
- * Seconds until the next strike.
- *
- * Sparse, and deliberately so. This is weather, not a light cue — it belongs to
- * the scene rather than to anything the visitor did, so it has to be rare
- * enough that catching one feels like luck. Uneven, so nobody starts counting.
+ * How much sooner the first strike is allowed. A visitor who presses the
+ * button inside ten seconds should still have a fair chance of having seen
+ * the weather exist, and at the full spacing that chance is close to none.
  */
-function nextStrikeWait(): number {
-  return 9 + Math.random() * 15
-}
-
-/**
- * The first one, sooner. Not much sooner — but a visitor who presses the button
- * inside ten seconds should still have a fair chance of having seen the weather
- * exist, and at the full spacing that chance is close to none.
- */
-function firstStrikeWait(): number {
-  return 3.5 + Math.random() * 7
-}
-
-/** Advances the weather by one frame and returns this frame's brightness. */
-function advanceStorm(storm: Storm, delta: number): number {
-  if (storm.t >= 0) {
-    storm.t += delta
-    if (storm.t <= STRIKE_LENGTH) return strikeAt(storm.t)
-    storm.t = -1
-    storm.wait = nextStrikeWait()
-    return 0
-  }
-  storm.wait -= delta
-  if (storm.wait <= 0) storm.t = 0
-  return 0
-}
+const FIRST_STRIKE = { min: 3.5, max: 10.5 }
 
 /**
  * Append `?doorAt=900` to pin the sequence to that millisecond and hold it
@@ -398,7 +344,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
   const glint = useRef(0)
   // Runs on its own clock from the moment the scene mounts, and keeps running
   // through the swing. Nothing the visitor does starts, stops or hurries it.
-  const storm = useRef<Storm>({ wait: firstStrikeWait(), t: -1 })
+  const storm = useRef(
+    createStorm(FIRST_STRIKE.min + Math.random() * (FIRST_STRIKE.max - FIRST_STRIKE.min)),
+  )
   /** Fades the weather out once the door is moving — see the frame loop. */
   const weather = useRef(1)
 
@@ -442,7 +390,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // page that is not merely movement someone might find unpleasant: a
     // repeating hard cut from black to white is the exact thing that setting
     // exists to switch off, and there is no gentler version of lightning.
-    const flash = timeline.travel ? advanceStorm(storm.current, delta) * weather.current : 0
+    const flash = timeline.travel
+      ? advanceStorm(storm.current, delta, STRIKE_GAP) * weather.current
+      : 0
     // Black except during a strike. There was an eyes-adjusting lift on the
     // walk in — the far side coming up with `push` — and it read as exactly
     // what it was: a grey box behind the doorway, growing. A doorway onto the
