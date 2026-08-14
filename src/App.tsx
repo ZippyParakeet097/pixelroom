@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { BootScreen } from './ui/BootScreen'
+import { DoorIntro } from './ui/DoorIntro'
 import { DialogueBox } from './ui/dialogue/DialogueBox'
 import { RoomChrome } from './ui/RoomChrome'
 import { MobilePortfolio } from './mobile/MobilePortfolio'
@@ -73,19 +73,42 @@ function useEscapeToHome() {
   }, [focused, inputLocked, stepBack])
 }
 
+/**
+ * Pulls the room's chunk down during the opening sequence.
+ *
+ * The room is not mounted until the door starts moving, but waiting until then
+ * to start fetching it would put a network round-trip inside the swing.
+ * Fetching on load means the chunk is already in hand when the click lands.
+ */
+function usePrefetchScene(active: boolean) {
+  useEffect(() => {
+    if (!active) return
+    void import('./scene/Scene')
+  }, [active])
+}
+
 export function App() {
   const isDesktop = useIsDesktop()
   const stage = useRoomStore((s) => s.stage)
   useEscapeToHome()
+  usePrefetchScene(isDesktop)
 
   if (!isDesktop) return <MobilePortfolio />
 
   return (
     <>
-      <Suspense fallback={null}>
-        <Scene />
-      </Suspense>
-      <BootScreen />
+      {/* Mounted the moment the door starts moving rather than when the black
+          lands, so the room's first frame — the expensive one, where every
+          material in it compiles — happens behind an opaque overlay with two
+          seconds of slack, instead of inside a 460ms black hold that it can
+          overrun. It costs a second canvas for the length of the swing, which
+          is less work than the boot screen used to sit in front of. */}
+      {stage !== 'door' && (
+        <Suspense fallback={null}>
+          <Scene />
+        </Suspense>
+      )}
+      <DoorIntro />
       {stage === 'room' && (
         <>
           <RoomChrome />
