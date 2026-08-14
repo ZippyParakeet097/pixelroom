@@ -152,6 +152,168 @@ export function woodTexture(): THREE.CanvasTexture {
   })
 }
 
+/**
+ * A 5×7 alphabet, drawn by hand, one string of bits per row.
+ *
+ * Hand-drawn rather than set in a font for the same reason the jukebox's
+ * transport glyphs are: at this size a font engine hands back a column of greys
+ * where the stem should be, and those greys are what the posterisation step
+ * turns into a smear. Placed one texel at a time there is nothing left for it
+ * to ruin.
+ *
+ * 5×7 rather than the 3×5 this started as. Three texels is the width at which a
+ * letter has one texel of stem, one of counter and one of stem, so *any*
+ * sampling phase that drops a column drops a stroke — the first pass at this
+ * had a plate reading PIXCLRNN, and even when every column survived the result
+ * read as lettering typed into a paint program rather than engraved. Five gives
+ * X a real crossing, M a real middle and O a real hole, and it survives losing
+ * a column. See `DOOR_GRID` for the other half of the fix.
+ *
+ * Only the letters the door needs exist. It is not a font.
+ */
+const PLATE_GLYPHS: Record<string, string[]> = {
+  P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
+  I: ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
+  X: ['10001', '10001', '01010', '00100', '01010', '10001', '10001'],
+  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+  R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+  M: ['10001', '11011', '10101', '10001', '10001', '10001', '10001'],
+}
+
+const PLATE_WORD = 'PIXELROOM'
+const PLATE_GLYPH = { width: 5, height: 7 } as const
+/** Five texels of glyph and one of air, the usual pitch for a 5-wide face. */
+const PLATE_PITCH = PLATE_GLYPH.width + 1
+
+/**
+ * The slab's own texel grid, and the reason the intro's pixelation pass runs at
+ * a divisor of 2 where the room runs at 4.
+ *
+ * Two constraints, pulling opposite ways.
+ *
+ * The door is a close-up — it fills a third of the frame where the room is a
+ * diorama seen from across itself — so at the room's divisor the leaf gets ~64
+ * render pixels across, the name has four to a letter, and the result is the
+ * paint-program look this started as. Halving the divisor for this one shot
+ * doubles that, and lands the door at about the same block *size* the room's
+ * furniture has: the same look, not a crisper one.
+ *
+ * Then the sheet has to be *coarser* than the render, not equal to it. The first
+ * pass at this matched them one to one, which sounds ideal and is the one ratio
+ * that cannot survive a rounding error: the leaf stands 11° ajar, so its far
+ * edge is ~3% smaller than its near one, the ratio crosses below 1 somewhere
+ * across the plate, and a texture row simply stops being sampled — the name
+ * rendered as PIXEL with a shorter ROOM after it, four letters missing their
+ * bottom row. Under-resolving instead means every texel lands on one render
+ * pixel or two. Stems come out a little uneven; nothing goes missing.
+ */
+export const DOOR_GRID = { width: 96, height: 192 } as const
+
+/**
+ * Where the lettering lands on the slab's grid, so that the plate it is
+ * engraved into can be cut to fit it.
+ *
+ * The name is authored on *this* grid rather than on a little sheet of its own
+ * sized to the plate, so that both agree with the slab about where a texel is.
+ */
+export const NAME_RECT = {
+  /* On the top rail, which is where a door carries a name and the only part of
+     this leaf that is flat all the way across: the plate is wider than a panel
+     and would otherwise have to bridge the mouldings around one. */
+  x: Math.round(
+    (DOOR_GRID.width - (PLATE_WORD.length * PLATE_PITCH - (PLATE_PITCH - PLATE_GLYPH.width))) / 2,
+  ),
+  /** Centres the plate on the top rail. See `RAILS` for where that rail is. */
+  y: 20,
+  width: PLATE_WORD.length * PLATE_PITCH - (PLATE_PITCH - PLATE_GLYPH.width),
+  height: PLATE_GLYPH.height,
+} as const
+
+/**
+ * Plate around the lettering. Wide enough at the sides to clear the rule drawn
+ * inside the plate's border with a texel of air to spare — see `PLATE_INSET`.
+ */
+const PLATE_MARGIN = { x: 5, y: 7 } as const
+
+/**
+ * The plate itself, on the same grid — derived from where the letters actually
+ * land rather than measured against them, so it cannot drift off its own
+ * lettering. The door reads this to size the block it hangs on the leaf.
+ */
+export const PLATE_RECT = {
+  x: NAME_RECT.x - PLATE_MARGIN.x,
+  y: NAME_RECT.y - PLATE_MARGIN.y,
+  width: NAME_RECT.width + PLATE_MARGIN.x * 2,
+  height: NAME_RECT.height + PLATE_MARGIN.y * 2,
+} as const
+
+/**
+ * The name, and nothing else on the door.
+ *
+ * Cut with `alphaTest` rather than blended: the sheet is hard-edged pixel art
+ * with nothing part-way in between, so cutting the empty texels at draw time
+ * avoids blending, sorting and the depth-write games that come with a
+ * transparent quad lying a few millimetres in front of a solid one.
+ */
+export function namePlateTexture(): THREE.CanvasTexture {
+  return makeTexture('door-name', DOOR_GRID.width, DOOR_GRID.height, (ctx) => {
+    /* Near-black and neutral, for maximum separation from the plate under it.
+       The old lettering was a warm brown left over from a warm brown plate. */
+    ctx.fillStyle = '#22252c'
+    let x = NAME_RECT.x
+    for (const letter of PLATE_WORD) {
+      const glyph = PLATE_GLYPHS[letter]
+      for (let row = 0; row < glyph.length; row++) {
+        for (let column = 0; column < PLATE_GLYPH.width; column++) {
+          if (glyph[row][column] === '1') ctx.fillRect(x + column, NAME_RECT.y + row, 1, 1)
+        }
+      }
+      x += PLATE_PITCH
+    }
+  })
+}
+
+/**
+ * The plate's face: flat field, hard outline, one rule inside it.
+ *
+ * A pass at this with a brushed finish — a value ramp down the plate, per-row
+ * grain, a lit bevel on two edges — was worse in both directions at once. The
+ * ramp read as gloss rather than as steel, and the grain put a stop of noise
+ * across letters that are five texels wide, which is the one thing the lettering
+ * cannot spare. A sign at this size is drawn, not shaded: three flat tones on
+ * the grid, and the plate's own geometry standing proud of the leaf to do the
+ * lighting that the texture is not allowed to fake.
+ */
+const PLATE_FACE = '#c6d5e5'
+const PLATE_RULE = '#8b98ac'
+const PLATE_EDGE = '#2a2632'
+/** Where the rule sits, in from the edge. Clear of the lettering — see `PLATE_MARGIN`. */
+const PLATE_INSET = 3
+
+/**
+ * The plate, drawn at exactly the size it occupies on the door's grid so its
+ * texels land on the same pitch as the lettering over it.
+ */
+export function namePlateFaceTexture(): THREE.CanvasTexture {
+  return makeTexture('door-plate', PLATE_RECT.width, PLATE_RECT.height, (ctx, w, h) => {
+    ctx.fillStyle = PLATE_FACE
+    ctx.fillRect(0, 0, w, h)
+
+    ctx.fillStyle = PLATE_RULE
+    ctx.fillRect(PLATE_INSET, PLATE_INSET, w - PLATE_INSET * 2, h - PLATE_INSET * 2)
+    ctx.fillStyle = PLATE_FACE
+    ctx.fillRect(PLATE_INSET + 1, PLATE_INSET + 1, w - PLATE_INSET * 2 - 2, h - PLATE_INSET * 2 - 2)
+
+    ctx.fillStyle = PLATE_EDGE
+    ctx.fillRect(0, 0, w, 1)
+    ctx.fillRect(0, h - 1, w, 1)
+    ctx.fillRect(0, 0, 1, h)
+    ctx.fillRect(w - 1, 0, 1, h)
+  })
+}
+
 export function carpetTexture(): THREE.CanvasTexture {
   return makeTexture('carpet', 32, 32, (ctx, w, h) => {
     ctx.fillStyle = PALETTE.rug

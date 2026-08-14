@@ -2,7 +2,9 @@
 
 My portfolio, dressed up like one of those retro RPGs.
 
-You spawn into a low-poly bedroom running under a chunky pixel-art filter.
+It opens on a mahogany door with my name on it, standing ajar, with a storm
+going on somewhere behind it. Open that and you walk through it into a
+low-poly bedroom running under a chunky pixel-art filter.
 Click something and the camera walks across the room to it. Takes a beat, but
 that's half the fun. Most of the furniture does something. The PC boots a
 fake Windows XP desktop, skinned with [XP.css](https://botoxparty.github.io/XP.css/),

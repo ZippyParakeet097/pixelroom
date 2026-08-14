@@ -361,6 +361,215 @@ export function playMotor(seconds: number): void {
   whine.stop(now + duration + 0.02)
 }
 
+/**
+ * A dry hinge, for the length of the swing.
+ *
+ * The character of a creak is stick-slip: the hinge grips, releases, grips
+ * again, and the pitch lurches upward in steps rather than gliding. A smooth
+ * ramp over the same range is a theremin, not a door — so the frequency follows
+ * a hand-written jagged curve. It is hand-written rather than random because
+ * the door creaks once per visit, at the same moment every time, and a sound
+ * that came out different on every load would be impossible to art-direct
+ * against the swing it is scoring.
+ *
+ * Takes its length from the caller for the same reason `playMotor` does: the
+ * swing's duration is already known, and a one-shot of a known length cannot
+ * outlive the movement it belongs to.
+ */
+const CREAK_CURVE = [0.36, 0.52, 0.45, 0.66, 0.58, 0.79, 0.71, 0.9, 0.83, 1, 0.94, 0.7]
+
+export function playDoorCreak(seconds: number): void {
+  const ctx = getContext()
+  const master = getMasterGain()
+  if (!ctx || !master || ctx.state !== 'running') return
+
+  const now = ctx.currentTime
+  const duration = Math.min(3, Math.max(0.25, seconds))
+
+  const out = ctx.createGain()
+  out.gain.setValueAtTime(0, now)
+  out.gain.linearRampToValueAtTime(1, now + duration * 0.16)
+  out.gain.setValueAtTime(1, now + duration * 0.6)
+  // Fades out before the leaf stops rather than at the same instant: a hinge
+  // goes quiet as the door loses speed, and holding the squeal to the end makes
+  // the swing sound like it was cut off.
+  out.gain.exponentialRampToValueAtTime(0.0001, now + duration * 0.94)
+  out.connect(master)
+
+  // The squeal itself. Sawtooth through a narrow bandpass that climbs with the
+  // pitch — metal on metal is almost all upper partials, and a sine here sounds
+  // like a whistle.
+  const squeal = ctx.createOscillator()
+  squeal.type = 'sawtooth'
+  squeal.frequency.setValueCurveAtTime(
+    new Float32Array(CREAK_CURVE.map((v) => 190 + v * 470)),
+    now,
+    duration,
+  )
+  const squealFilter = ctx.createBiquadFilter()
+  squealFilter.type = 'bandpass'
+  squealFilter.Q.value = 3.4
+  squealFilter.frequency.setValueCurveAtTime(
+    new Float32Array(CREAK_CURVE.map((v) => 560 + v * 1500)),
+    now,
+    duration,
+  )
+  const squealGain = ctx.createGain()
+  squealGain.gain.value = 0.055
+  squeal.connect(squealFilter)
+  squealFilter.connect(squealGain)
+  squealGain.connect(out)
+  squeal.start(now)
+  squeal.stop(now + duration + 0.02)
+
+  // Grain: the rub under the squeal. Without it the hinge sounds machined.
+  const rub = ctx.createBufferSource()
+  rub.buffer = getNoise(ctx)
+  rub.loop = true
+  const rubFilter = ctx.createBiquadFilter()
+  rubFilter.type = 'bandpass'
+  rubFilter.Q.value = 1.6
+  rubFilter.frequency.setValueCurveAtTime(
+    new Float32Array(CREAK_CURVE.map((v) => 900 + v * 2200)),
+    now,
+    duration,
+  )
+  const rubGain = ctx.createGain()
+  rubGain.gain.value = 0.03
+  rub.connect(rubFilter)
+  rubFilter.connect(rubGain)
+  rubGain.connect(out)
+  rub.start(now)
+  rub.stop(now + duration + 0.02)
+
+  // The leaf's mass, under all of it. Felt more than heard on laptop speakers,
+  // but it is what stops the door reading as a small object.
+  const timber = ctx.createOscillator()
+  timber.type = 'sine'
+  timber.frequency.setValueAtTime(72, now)
+  timber.frequency.exponentialRampToValueAtTime(52, now + duration)
+  const timberGain = ctx.createGain()
+  timberGain.gain.value = 0.09
+  timber.connect(timberGain)
+  timberGain.connect(out)
+  timber.start(now)
+  timber.stop(now + duration + 0.02)
+}
+
+/* Sampled one-shots ---------------------------------------------------------
+ *
+ * Everything above is synthesised, and deliberately: a beep, a relay or a coin
+ * is a handful of numbers, and shipping a recording of one is a network request
+ * for something an oscillator already does exactly. A door is the other way
+ * round. It is a latch letting go, a stile flexing and a dry hinge, none of
+ * them periodic and none of them separable, and the synthesised version was
+ * three voices each approximating a different part of one event.
+ */
+
+/**
+ * Encoded bytes, by URL — kept apart from the decode below so that pulling a
+ * sample down early does not drag an AudioContext into existence with it. The
+ * page can prefetch on mount; the context still waits for the gesture that is
+ * allowed to create it.
+ */
+const encodedSamples = new Map<string, Promise<ArrayBuffer | null>>()
+/** Decoded buffers, by URL. `decodeAudioData` detaches what it is handed, so
+ *  this promise is the one-and-only decode of each file. */
+const decodedSamples = new Map<string, Promise<AudioBuffer | null>>()
+
+export function prefetchSample(url: string): void {
+  if (encodedSamples.has(url)) return
+  encodedSamples.set(
+    url,
+    fetch(url)
+      .then((response) => (response.ok ? response.arrayBuffer() : null))
+      .catch(() => null),
+  )
+}
+
+/** Null for anything that failed to arrive or failed to decode. Callers are
+ *  expected to have something to fall back to rather than go silent. */
+export function loadSample(url: string): Promise<AudioBuffer | null> {
+  const cached = decodedSamples.get(url)
+  if (cached) return cached
+
+  prefetchSample(url)
+  const pending = (encodedSamples.get(url) as Promise<ArrayBuffer | null>).then(async (bytes) => {
+    const ctx = getContext()
+    if (!bytes || !ctx) return null
+    try {
+      return await ctx.decodeAudioData(bytes)
+    } catch {
+      return null
+    }
+  })
+
+  decodedSamples.set(url, pending)
+  return pending
+}
+
+function playSample(buffer: AudioBuffer, gain: number): void {
+  const ctx = getContext()
+  const master = getMasterGain()
+  if (!ctx || !master || ctx.state !== 'running') return
+
+  const level = ctx.createGain()
+  level.gain.value = gain
+  level.connect(master)
+
+  const source = ctx.createBufferSource()
+  source.buffer = buffer
+  source.connect(level)
+  source.start(ctx.currentTime)
+}
+
+/**
+ * The door being opened, as one recording of the whole gesture.
+ *
+ * One sample rather than a cue per beat, because the beats are already in it
+ * and they land where the animation puts them: the mechanism rattles for the
+ * first fifth of a second, which is exactly `latch` and the lever going over;
+ * the bolt lets go at about a quarter of a second, which is where `swing`
+ * starts; and the rest is the leaf moving, decaying out around where it reaches
+ * its stop. So it is fired on the press and then left alone — nothing here is
+ * retimed against the door, and nothing is layered over it. Two doors opening
+ * at once is the one mistake in this that would be audible on any speaker.
+ */
+const DOOR_OPEN = '/assets/audio/open-door.mp3'
+
+/**
+ * Held well under unity.
+ *
+ * The file is mastered to a hair under full scale, and everything else in this
+ * room was authored quiet — through the 0.35 master a recording at unity opens
+ * the page a good deal louder than anything the visitor meets afterwards.
+ *
+ * Tuned down by ear from there. The bolt letting go is a single full-scale
+ * transient a quarter of a second in, and it is the loudest thing in the
+ * session by some way: set where the body of the door sat comfortably, that one
+ * spike still arrived as a crack. This is that spike's level, and the rest of
+ * the door came down with it.
+ */
+const DOOR_OPEN_GAIN = 0.12
+
+/** Call on mount, so the click is not waiting on the network. */
+export function prefetchDoorOpen(): void {
+  prefetchSample(DOOR_OPEN)
+}
+
+/** Call from the press, once `unlockAudio` has resolved. */
+export function playDoorOpen(): void {
+  void loadSample(DOOR_OPEN).then((buffer) => {
+    // A door that made no sound at all would read as the click having missed.
+    // The synthesised latch is not the recording, but it is the press.
+    if (!buffer) {
+      playSfx('latch')
+      return
+    }
+    playSample(buffer, DOOR_OPEN_GAIN)
+  })
+}
+
 export function playSfx(name: SfxName): void {
   if (isNoise(name)) {
     playNoise(NOISE_SPECS[name])

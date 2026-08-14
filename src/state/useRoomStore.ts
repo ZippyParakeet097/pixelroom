@@ -3,7 +3,20 @@ import { HOTSPOTS, INTRO_LINES } from '@/hotspots/hotspots'
 import type { HotspotId } from '@/hotspots/types'
 import { PROJECTS } from '@/content/projects'
 
-export type Stage = 'boot' | 'room'
+/**
+ * The opening sequence, one beat per value.
+ *
+ * `door` — a closed door, facing the visitor, waiting to be opened.
+ * `opening` — the leaf swings, the camera walks through it, and the frame goes
+ *   to black. The room is mounted for this whole beat, behind the door, so it
+ *   has finished compiling by the time anyone can see it.
+ * `room` — the black lifts, the narrator starts.
+ *
+ * They only ever run forwards. Nothing puts the visitor back on the door. The
+ * beats *inside* `opening` — the swing, the black, the hold — belong to the
+ * overlay that draws them and are not modelled here.
+ */
+export type Stage = 'door' | 'opening' | 'room'
 
 interface RoomState {
   stage: Stage
@@ -53,6 +66,9 @@ interface RoomState {
   monitorOn: boolean
   setMonitorOn: (on: boolean) => void
 
+  /** Starts the swing. */
+  openDoor: () => void
+  /** The black lifts. */
   enterRoom: () => void
   focusHotspot: (id: HotspotId) => void
   returnHome: () => void
@@ -77,7 +93,7 @@ interface RoomState {
  * renders whatever is queued (plan §4).
  */
 export const useRoomStore = create<RoomState>((set, get) => ({
-  stage: 'boot',
+  stage: 'door',
   focused: null,
   hovered: null,
   shelfProject: null,
@@ -88,6 +104,11 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   inputLocked: false,
   curtainsOpen: false,
   monitorOn: true,
+
+  openDoor: () => {
+    if (get().stage !== 'door') return
+    set({ stage: 'opening' })
+  },
 
   enterRoom: () => {
     if (get().stage === 'room') return

@@ -1,0 +1,116 @@
+.doorway {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  /* Black under the canvas as well as over it. The door fades in when its
+     chunk lands, and the veil fades back over it at the end — neither is ever
+     the thing keeping the page from showing through. */
+  background: var(--cave-black);
+}
+
+.doorway--closed {
+  cursor: pointer;
+}
+
+.doorway__stage {
+  position: absolute;
+  inset: 0;
+  animation: doorway-in 520ms ease-out both;
+}
+
+@keyframes doorway-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.doorway__veil {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition-property: opacity;
+  transition-timing-function: ease-in-out;
+}
+
+/* Chrome ------------------------------------------------------------------- */
+
+.doorway__chrome {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 42px 24px 40px;
+  text-align: center;
+  /* The surface underneath takes the click — the button is the only part of
+     this layer that needs the pointer. */
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+
+.doorway--opening .doorway__chrome,
+.doorway--black .doorway__chrome,
+.doorway--revealing .doorway__chrome {
+  opacity: 0;
+}
+
+.doorway__kicker {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--cave-cyan);
+  opacity: 0.7;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* The visible name lives on the plate on the door. This is for screen readers
+   and for anything that reads the page as a document. */
+.doorway__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.doorway__enter {
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  pointer-events: auto;
+  cursor: pointer;
+  color: var(--cave-paper);
+  background: rgba(20, 16, 26, 0.72);
+  border: 2px solid rgba(232, 224, 208, 0.35);
+  /* Understated on purpose. The door is the invitation now; this is the
+     keyboard's way in and a label for what the click does. */
+  transition:
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.doorway__enter:hover:enabled,
+.doorway__enter:focus-visible {
+  color: var(--cave-amber);
+  border-color: var(--cave-amber);
+  outline: none;
+}
+
+.doorway__enter:disabled {
+  cursor: default;
+  color: rgba(232, 224, 208, 0.4);
+  border-color: rgba(232, 224, 208, 0.15);
+}

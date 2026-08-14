@@ -2,8 +2,8 @@
  * Shared Web Audio context (plan §2).
  *
  * Browsers create an AudioContext in the `suspended` state until a real user
- * gesture resumes it. The boot screen's "enter" click is that gesture — see
- * `unlockAudio`. Everything that makes noise goes through `getContext`, so a
+ * gesture resumes it. Opening the door is that gesture — see `unlockAudio`.
+ * Everything that makes noise goes through `getContext`, so a
  * caller can never accidentally spawn a second context.
  */
 
@@ -30,10 +30,18 @@ export function getMasterGain(): GainNode | null {
   return masterGain
 }
 
-/** Call from a user-gesture handler. Safe to call repeatedly. */
-export function unlockAudio(): void {
+/**
+ * Call from a user-gesture handler. Safe to call repeatedly.
+ *
+ * Resolves when the context is actually running, which is not the same tick.
+ * Anything that wants to make a sound *on* the unlocking gesture has to wait
+ * for this — every voice in `sfx` refuses to play into a suspended context, so
+ * a sound scheduled alongside the call is simply dropped.
+ */
+export function unlockAudio(): Promise<void> {
   const ctx = getContext()
-  if (ctx && ctx.state === 'suspended') void ctx.resume()
+  if (!ctx || ctx.state !== 'suspended') return Promise.resolve()
+  return ctx.resume()
 }
 
 export function setMuted(next: boolean): void {
