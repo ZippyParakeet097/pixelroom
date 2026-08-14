@@ -23,13 +23,25 @@ type Vec3 = [number, number, number]
  *
  * The leaf is a painted two-panel door — plum, with the panels sunk behind a
  * frame of stiles and rails — carrying a lever handle and the name on a plate.
- * Nothing behind it is modelled at all: the floor stops at the wall and the far side is an
- * empty unlit box, so the opening is a genuine void and walking into it *is*
- * the fade to black. The lightning is that box going white for a few frames,
- * seen through the crack the door is already standing open by.
+ *
+ * The far side is pitch black, and the lit side is the one the visitor is
+ * standing on. That is deliberate: a camera moving at a black rectangle for a
+ * second reads as a camera that is not moving, so the motion has to come from
+ * this side of the wall — the casing, the lining and the jambs raking past the
+ * lens as the dolly goes through them. Give the far side a value of its own
+ * and it stops being a doorway; it becomes a grey box hanging behind one.
+ *
+ * The weather is the only thing that ever shows what is back there, and it
+ * runs on its own clock — sparse, random, and completely indifferent to what
+ * the visitor is doing. See `advanceStorm`.
  */
 
-const WALL = { half: 7, height: 5, thickness: 0.3 } as const
+/**
+ * Thick on purpose. The reveal — the depth of wall the camera passes through —
+ * is the only surface in the shot that sweeps past the lens, and a 30cm one is
+ * gone in three frames. Half a metre gives the walk something to happen in.
+ */
+const WALL = { half: 7, height: 5, thickness: 0.5 } as const
 /** The hole in the wall. The slab is cut slightly smaller so it can move. */
 const OPENING = { half: 0.6, height: 2.3 } as const
 const SLAB = { width: 1.16, height: 2.26, depth: 0.06 } as const
@@ -52,6 +64,24 @@ const FRAME = { depth: 0.04, stile: 0.13 } as const
 
 /** The architrave round the opening. Wide enough to be a moulding, not a line. */
 const CASING = { width: 0.08, depth: 0.025 } as const
+
+/**
+ * The lining: the painted board on the inside faces of the opening, carrying
+ * the casing round the corner and into the hole.
+ *
+ * This is the fix for the walk. Without it the reveal is bare wall — unlit,
+ * because the only key is out front and the inside faces of a hole point
+ * sideways — so the open doorway is a black rectangle with a bright outline
+ * and the dolly has nothing to move against. Lined, the opening is a short
+ * bright tunnel, and a tunnel raking out past the edges of frame is the whole
+ * sensation of going through a door.
+ *
+ * Only the front of the reveal is boarded. Behind `depth` the tunnel goes to
+ * bare dark wall, which is what keeps the far end reading as somewhere else,
+ * and it stops short of the leaf so the two never intersect while the door is
+ * still shut.
+ */
+const LINING = { thickness: 0.035, depth: 0.2 } as const
 
 /**
  * Where each rail starts and stops, up from the bottom of the leaf. The gaps
@@ -83,7 +113,17 @@ const HANDLE = {
 
 const INTRO_FOV = 42
 const CAMERA_START: Vec3 = [0, 1.58, 4.5]
-const CAMERA_END: Vec3 = [0, 1.45, -1.8]
+/**
+ * Through the wall and a little way past it.
+ *
+ * Stopping short of the opening was tried and is worse: the last second is
+ * then a slow creep at a rectangle that is already most of the screen, which
+ * is a zoom rather than a walk. The lining has to actually leave frame, and it
+ * only does that once the camera is inside the hole. Past the back face by
+ * about half a metre — far enough that the tunnel mouth is behind the lens,
+ * close enough that no time is spent staring at an empty box.
+ */
+const CAMERA_END: Vec3 = [0, 1.45, -0.85]
 const LOOK_START: Vec3 = [0, 1.18, 0]
 const LOOK_END: Vec3 = [0, 1.18, -6]
 
@@ -126,9 +166,51 @@ const PLATE = {
   y: SLAB.height * (1 - (PLATE_RECT.y + PLATE_RECT.height / 2) / DOOR_GRID.height),
   depth: 0.005,
 } as const
-/** The far side, between strikes and at the top of one. */
-const VOID_DARK = new THREE.Color('#08070c')
-const VOID_LIT = new THREE.Color('#e8eeff')
+/**
+ * The far side: black, and what a strike does to it.
+ *
+ * Both are literal black. The visitor is walked into somewhere unlit, and the
+ * only thing that ever shows what is back there is the weather — so the room
+ * has no value of its own to read as a grey box hanging behind the doorway.
+ * Two colours rather than one so a strike still separates a floor from a wall.
+ */
+const VOID_DARK = new THREE.Color('#000000')
+const VOID_FLOOR = new THREE.Color('#000000')
+const VOID_LIT = new THREE.Color('#dfe6f7')
+/** The wedge a strike throws through the opening, across the floor this side. */
+const SPILL = new THREE.Color('#cfdcff')
+
+/**
+ * The falloff of that wedge, as a map: a soft disc centred on the doorway end
+ * of the quad and dying out before its far edge.
+ *
+ * Painted rather than lit. A real light behind the wall has no idea the wall
+ * is there — nothing here casts shadows, by design — so it would lay the same
+ * glow on the front of the wall as on the floor, and light passing straight
+ * through masonry reads as a bug rather than as a doorway. A quad is the whole
+ * effect, costs one draw, and can be widened by the leaf's own angle.
+ */
+function makeSpillTexture(): THREE.Texture {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  // Centred on the top edge, which is the door end: row 0 of the canvas is
+  // v = 1, and the quad is laid down with v = 1 against the threshold.
+  const gradient = ctx.createRadialGradient(size / 2, 0, 0, size / 2, 0, size)
+  gradient.addColorStop(0, 'rgba(255,255,255,0.95)')
+  gradient.addColorStop(0.45, 'rgba(255,255,255,0.34)')
+  gradient.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, size, size)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.generateMipmaps = false
+  return texture
+}
 
 /**
  * One strike, as a curve: time in seconds against brightness.
@@ -167,15 +249,33 @@ interface Storm {
   t: number
 }
 
+/**
+ * Seconds until the next strike.
+ *
+ * Sparse, and deliberately so. This is weather, not a light cue — it belongs to
+ * the scene rather than to anything the visitor did, so it has to be rare
+ * enough that catching one feels like luck. Uneven, so nobody starts counting.
+ */
+function nextStrikeWait(): number {
+  return 9 + Math.random() * 15
+}
+
+/**
+ * The first one, sooner. Not much sooner — but a visitor who presses the button
+ * inside ten seconds should still have a fair chance of having seen the weather
+ * exist, and at the full spacing that chance is close to none.
+ */
+function firstStrikeWait(): number {
+  return 3.5 + Math.random() * 7
+}
+
 /** Advances the weather by one frame and returns this frame's brightness. */
 function advanceStorm(storm: Storm, delta: number): number {
   if (storm.t >= 0) {
     storm.t += delta
     if (storm.t <= STRIKE_LENGTH) return strikeAt(storm.t)
     storm.t = -1
-    // Far enough apart that a strike is an event rather than a strobe, and
-    // uneven enough that nobody can start counting to the next one.
-    storm.wait = 2.4 + Math.random() * 4.6
+    storm.wait = nextStrikeWait()
     return 0
   }
   storm.wait -= delta
@@ -213,6 +313,11 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
          rectangle of timber floating in a flat field with nothing to give the
          doorway a size. */
       casing: makeMaterial('#969ab1'),
+      /* The reveal, a shade under the casing it turns in from. Same board,
+         seen edge-on and away from the key, so it cannot be the same value on
+         screen without reading as a separate lighter thing stuck inside the
+         opening. */
+      lining: makeMaterial('#7c8098'),
       floor: makeMaterial(PALETTE.floorAlt),
       threshold: makeMaterial(PALETTE.ink),
       /* No map on either. Two passes at a painted figure into the leaf — plank
@@ -236,30 +341,64 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
          the doorway stops reading as a hole. Inside-out, because it is a room
          rather than a backdrop: see the geometry. */
       beyond: makeGlowMaterial(`#${VOID_DARK.getHexString()}`, { side: THREE.BackSide }),
+      beyondFloor: makeGlowMaterial(`#${VOID_FLOOR.getHexString()}`),
+      /* Additive, so it lifts the floor it lies on instead of replacing it,
+         and so its soft edge needs no guesswork about what is underneath.
+         Depth-write off for the same reason as any other decal. */
+      spill: makeGlowMaterial(`#${SPILL.getHexString()}`, {
+        map: makeSpillTexture(),
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
     }),
     [],
   )
 
   // Unlike the room's furniture, this scene really does unmount — every material
   // here would otherwise stay on the GPU for the rest of the session, for a shot
-  // that is over in two seconds. Geometries are R3F's to clean up; the textures
-  // belong to the shared cache and are not ours to dispose.
+  // that is over in two seconds. Geometries are R3F's to clean up; the door's
+  // maps belong to the shared cache and are not ours to dispose. The spill's is
+  // ours — it is drawn here, for here, and nothing else ever asks for it.
   useEffect(() => {
     const owned = Object.values(materials)
+    const spillMap = materials.spill.map
     return () => {
       for (const material of owned) material.dispose()
+      spillMap?.dispose()
     }
   }, [materials])
 
   const leaf = useRef<THREE.Group>(null)
   const lever = useRef<THREE.Group>(null)
+  const bolt = useRef<THREE.DirectionalLight>(null)
   const behind = useRef<THREE.PointLight>(null)
   const fill = useRef<THREE.AmbientLight>(null)
-  const elapsed = useRef(0)
-  const clock = useRef(0)
+  const spill = useRef<THREE.Group>(null)
+  /**
+   * When the press landed, on the wall clock. Null until it does.
+   *
+   * Wall clock, not accumulated frame deltas, and this matters more than it
+   * looks. `DoorIntro` schedules the fade and the cut on `setTimeout`, so the
+   * overlay's idea of the sequence is wall time no matter what; if the swing
+   * runs on summed `delta`s instead, the two only agree while every frame
+   * arrives on schedule. They do not. This chunk lands, three compiles its
+   * shaders, and the first frames of the one animation on the page that has to
+   * hit its marks are the most expensive it will ever draw — and a tab that is
+   * not in front stops rendering altogether.
+   *
+   * Summed deltas make dropped frames *slow the door down*, so the veil comes
+   * up on a leaf that is still moving, or on one barely off the latch. Read off
+   * the clock, a dropped frame skips the pose instead, which is what a dropped
+   * frame is supposed to cost.
+   */
+  const started = useRef<number | null>(null)
   const hovered = useRef(false)
   const glint = useRef(0)
-  const storm = useRef<Storm>({ wait: 1.1, t: -1 })
+  // Runs on its own clock from the moment the scene mounts, and keeps running
+  // through the swing. Nothing the visitor does starts, stops or hurries it.
+  const storm = useRef<Storm>({ wait: firstStrikeWait(), t: -1 })
   /** Fades the weather out once the door is moving — see the frame loop. */
   const weather = useRef(1)
 
@@ -274,11 +413,15 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     camera.lookAt(lookAt)
   }, [camera, from, lookAt])
 
-  useFrame((_, delta) => {
-    clock.current += delta
-    if (opening) elapsed.current += delta * 1000
+  /** The press starts the clock. Only the clock — the weather is not ours. */
+  useEffect(() => {
+    if (!opening) return
+    started.current = performance.now()
+  }, [opening])
 
-    const ms = PINNED_AT ?? elapsed.current
+  useFrame((_, delta) => {
+    const now = performance.now()
+    const ms = PINNED_AT ?? (started.current === null ? 0 : now - started.current)
     const swing = swingAngle(ms, timeline)
     /** 0 where the door started, 1 at a right angle, and past 1 beyond that. */
     const open = Math.max(0, (swing - AJAR) / (Math.PI / 2))
@@ -289,28 +432,64 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // whole answer to the click for the first fifth of a second.
     if (lever.current) lever.current.rotation.z = latchAngle(ms, timeline)
 
-    // The storm is what the visitor is being walked into, so it stops the
-    // moment they commit: a strike part way through the swing would light the
-    // void the camera is about to be inside, and the whole point of that void
-    // is that there is nothing in it.
-    if (opening) weather.current = THREE.MathUtils.damp(weather.current, 0, 7, delta)
+    // Pulled down over the walk — to a floor, not to nothing. A strike is a
+    // hard cut from black to white, and the walk is the one stretch where the
+    // doorway is most of the screen; at full strength that is a full-screen
+    // strobe. The storm keeps its own timing either way, it just lands softly
+    // once the leaf is moving.
+    if (opening) weather.current = THREE.MathUtils.damp(weather.current, 0.4, 1.5, delta)
     // No weather at all under reduced motion. This is the one effect on the
     // page that is not merely movement someone might find unpleasant: a
     // repeating hard cut from black to white is the exact thing that setting
     // exists to switch off, and there is no gentler version of lightning.
-    const flash = timeline.animate ? advanceStorm(storm.current, delta) * weather.current : 0
+    const flash = timeline.travel ? advanceStorm(storm.current, delta) * weather.current : 0
+    // Black except during a strike. There was an eyes-adjusting lift on the
+    // walk in — the far side coming up with `push` — and it read as exactly
+    // what it was: a grey box behind the doorway, growing. A doorway onto the
+    // dark has to be dark, so the weather is the only thing that ever lifts it.
+    // The floor takes a touch more, so a strike still puts a horizon back there.
     materials.beyond.color.lerpColors(VOID_DARK, VOID_LIT, flash)
+    materials.beyondFloor.color.lerpColors(VOID_FLOOR, VOID_LIT, Math.min(1, flash * 1.3))
     if (behind.current) behind.current.intensity = flash * 90
-    // A little of the strike in the air on this side too. Nothing on the
+    // The same strike out here, as sky rather than as a source. Nothing on the
     // visitor's side of the wall can be lit by a light behind it, so without
-    // this the flash is a bright line and a dark room, which is what a crack
-    // under a door looks like — not what a storm does to a hallway.
-    if (fill.current) fill.current.intensity = AMBIENT + flash * 1.9
+    // this the flash is a bright hole in a dark room, which is what a crack
+    // under a door looks like — not what a storm does to a hallway. It also
+    // lands on the face of the leaf, which is the one moving thing in the shot.
+    if (bolt.current) bolt.current.intensity = flash * 5
+    if (fill.current) fill.current.intensity = AMBIENT + flash * 2.4
 
-    // Swallowed by the dark. There is one key light in this scene and it is on
-    // the visitor's side of the wall, so a slab that swings past ninety degrees
-    // is edge-on to it and then behind it.
-    const shade = 1 - Math.min(1, open) * 0.72
+    // The wedge a strike throws through the opening and across the floor on
+    // this side, as wide as the leaf has left it. Driven by `flash`, because
+    // there is nothing back there to spill: the light is the weather, so the
+    // wedge exists exactly as long as the strike does.
+    const wedge = Math.min(1, 0.14 + open * 1.2)
+    materials.spill.opacity = flash * wedge * 0.85
+    // Anchored at the threshold, so local +Y is length away from the door and
+    // local X is the width of the mouth — see the group it scales.
+    if (spill.current) spill.current.scale.set(0.34 + wedge * 0.66, 0.5 + wedge * 0.5, 1)
+
+    /**
+     * Swallowed by the dark — but only at the very end of the swing, and only
+     * a little.
+     *
+     * This used to be `1 - min(1, open) * 0.72`: a third of its brightness gone
+     * by the time the leaf was a quarter open, and under a third left at
+     * square. That is on top of two other things already taking it down. The
+     * leaf turns away from the key as it swings, so Lambert is dimming it
+     * anyway; and the pixelation pass posterises to 26 levels over a signal
+     * that has already been squared, so anything under about a fortieth of full
+     * is written out as black. The three together put the leaf at literal zero
+     * before it was half open.
+     *
+     * Which is the whole reason the sequence read as having no animation in it.
+     * The leaf is the only thing in the shot that moves; it was going black on
+     * the way, so what you saw was a door dissolving rather than a door
+     * opening — and the frames where it was still visible were the frames where
+     * it had barely moved. Nothing else was wrong with the swing. It was being
+     * turned off while it ran.
+     */
+    const shade = 1 - Math.max(0, open - 0.7) * 1.4
     materials.slab.color.copy(LEAF).multiplyScalar(shade)
     materials.panel.color.copy(PANEL).multiplyScalar(shade)
     materials.engraving.color.setScalar(shade)
@@ -332,7 +511,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // A walk rather than a dolly: two sine terms an octave apart for the gait,
     // and a slow lateral sway, all scaled by how far in the camera already is
     // so the first step out of stillness isn't a lurch.
-    const stride = clock.current * 6.4
+    const stride = (now / 1000) * 6.4
     camera.position.y += (Math.sin(stride) * 0.014 + Math.sin(stride * 2) * 0.005) * push
     camera.position.x += Math.sin(stride * 0.5) * 0.01 * push
     lookAt.lerpVectors(lookFrom, lookTo, push)
@@ -355,13 +534,25 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           side to light it but the weather. Warm, because a cool key on a red
           timber takes the red straight out of it. */}
       <directionalLight position={[3.5, 5, 7]} intensity={4.8} color="#e6d7c2" />
-      {/* The storm itself: one light, behind the wall, raking the reveal and
-          the inner edge of the leaf. There was a second one out here for the
-          spill through the gap, and a point light is the wrong instrument for
-          it — on a wall this flat and this empty it draws a perfect soft
-          circle hanging in the air beside the door, and when it reaches round
-          onto the leaf it reads as somebody outside with a torch. The lift on
-          the ambient above does that job without inventing a source. */}
+      {/* The kicker, and it exists for one object.
+
+          Side on from the right and almost level, which is very nearly useless
+          to everything else in the shot: the wall, the casing and the floor all
+          face the wrong way to take much of it. The leaf's face does not. Shut,
+          it is square to the camera and picks up almost none of this; open, it
+          has turned to face straight into it. So the light comes *up* on the
+          leaf over exactly the span where the key is falling off it, and the
+          one thing that moves stays lit the whole way round instead of sinking
+          into the wall behind it. */}
+      <directionalLight position={[9, 2.4, 0.5]} intensity={3.2} color="#d8c9b4" />
+      {/* The strike, out here as sky. Directional rather than a point: a
+          discharge miles up does not fall off across four metres of hallway,
+          and a point light close enough to matter draws a soft circle on the
+          wall that reads as somebody outside with a torch. */}
+      <directionalLight ref={bolt} position={[2.4, 4.5, 6]} intensity={0} color="#dbe6ff" />
+      {/* And the same strike behind the wall, raking the reveal and the inner
+          edge of the leaf — the only light the far side of this scene ever
+          gets, which is what keeps it a dark room rather than a lit one. */}
       <pointLight
         ref={behind}
         position={[0.3, 1.7, -1.1]}
@@ -422,6 +613,32 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
         material={materials.casing}
       />
 
+      {/* The lining: three boards down the inside faces of the opening, set in
+          from the front of the wall so they stop before the leaf. No board on
+          the floor — the threshold is already there and a bright strip across
+          the bottom of the hole caps the line of light under the door. */}
+      {[-1, 1].map((side) => (
+        <Block
+          key={side}
+          size={[LINING.thickness, OPENING.height, LINING.depth]}
+          position={[
+            side * (OPENING.half - LINING.thickness / 2),
+            OPENING.height / 2,
+            WALL.thickness / 2 - LINING.depth / 2,
+          ]}
+          material={materials.lining}
+        />
+      ))}
+      <Block
+        size={[OPENING.half * 2, LINING.thickness, LINING.depth]}
+        position={[
+          0,
+          OPENING.height - LINING.thickness / 2,
+          WALL.thickness / 2 - LINING.depth / 2,
+        ]}
+        material={materials.lining}
+      />
+
       {/* The far side: a box the far side of the wall, drawn from the inside.
           A flat quad across the opening would be simpler, and wrong twice over
           — the leaf swings *through* where it would have to sit, so the door
@@ -430,6 +647,19 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           camera ends up inside of is black from every position it can be in. */}
       <mesh position={[0, 1.5, -3]} material={materials.beyond} raycast={noRaycast}>
         <boxGeometry args={[6, 6, 6]} />
+      </mesh>
+      {/* Its floor. Invisible between strikes, which is correct — there is
+          nothing back there to see. During one it separates from the wall, and
+          the horizon that appears for those few frames is the only thing that
+          says the far side is a room with a depth to it rather than a hole cut
+          in the picture. */}
+      <mesh
+        position={[0, 0.001, -3]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={materials.beyondFloor}
+        raycast={noRaycast}
+      >
+        <planeGeometry args={[6, 6]} />
       </mesh>
 
       {/* Floor on this side only. It stops at the wall, and nothing at all is
@@ -442,6 +672,22 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
       >
         <planeGeometry args={[WALL.half * 2, 10]} />
       </mesh>
+      {/* The light let out onto this side, as a quad rather than as a light —
+          see `makeSpillTexture`. Hinged at the threshold: the group sits on it
+          and the plane hangs back off the group towards the camera, so scaling
+          the group grows the wedge away from the door instead of about its own
+          middle. Local +Y runs from the camera to the doorway, which is where
+          the map's bright end is. */}
+      <group
+        ref={spill}
+        position={[0, 0.004, WALL.thickness / 2]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <mesh position={[0, -1.9, 0]} material={materials.spill} raycast={noRaycast}>
+          <planeGeometry args={[3.4, 3.8]} />
+        </mesh>
+      </group>
+
       {/* Threshold strip, on the near side of the opening only. Run through the
           middle it would sit under the undercut and cap the line of light that
           gets out beneath the door, which is half of what says there is weather

@@ -17,8 +17,11 @@ export interface DoorTimeline {
   swing: [number, number]
   /** Start and end of the camera's walk through the doorway. */
   push: [number, number]
-  /** False holds the door shut and the camera still — see `REDUCED_TIMELINE`. */
-  animate: boolean
+  /**
+   * False plants the camera and switches the storm off — see
+   * `REDUCED_TIMELINE`. The leaf still swings either way.
+   */
+  travel: boolean
   /** Total length of the 3D beat — the moment the screen is fully black. */
   sequence: number
   /** How long the fade to black takes. It *ends* at `sequence`. */
@@ -37,42 +40,75 @@ export interface DoorTimeline {
 export const FULL_TIMELINE: DoorTimeline = {
   latch: 200,
   swing: [230, 1150],
-  push: [480, 1850],
-  animate: true,
-  sequence: 1850,
-  veil: 450,
+  // Overlaps the swing, but only just, and only barely moves while it is
+  // running. The swing *is* the shot — it is the one thing on screen that
+  // moves, and it needs a frame wide enough to be seen moving in. Started
+  // earlier and harder the camera has the doorway filling the picture by the
+  // time the leaf is half over, so the door finishes opening off the edges of
+  // the screen. The walk gets the second half to itself.
+  push: [500, 1780],
+  travel: true,
+  // Deliberately past the end of the push. The push runs on the render clock
+  // and this on the wall clock, so a few dropped frames leave the camera short
+  // — the slack is what stops the screen going black with the walk still
+  // visibly running. If the frames were all there, the camera spends the
+  // difference already inside the dark, which costs nothing to look at.
+  sequence: 1900,
+  veil: 320,
   // Short. This is the only beat of the sequence with nothing in it, and black
   // held past the point of reading as a cut starts reading as a load.
-  hold: 340,
+  hold: 300,
   reveal: 650,
 }
 
 /**
- * With reduced motion the door is still the door — nothing in the scene moves.
- * The visitor sees the closed door, opens it, and the frame cuts to black and
- * comes up in the room, which is how a film would have done it anyway.
+ * With reduced motion the door still opens. The camera does not move and the
+ * storm does not flash.
  *
- * Nothing moves at all, rather than moving quickly: a leaf that snaps from shut
- * to open in a single frame is not motion, but it reads as a glitch, and the
- * cut carries the same meaning without asking anyone to interpret it.
+ * This used to freeze the whole scene — leaf shut, camera planted, cut to
+ * black — on the reasoning that a film would have cut anyway. It is the wrong
+ * reading of the setting twice over. What that setting is for is motion that
+ * moves the *frame*: a camera dollying through a doorway is the thing that
+ * makes people ill, and a strobing light is the thing that is genuinely
+ * dangerous, and both of those are off here. A door swinging on its hinge is
+ * an object moving inside a still frame, which is no more troubling than a
+ * cursor blinking — and it is the only thing that explains what the press did.
+ * Without it, pressing the one button on the page produces a fade to black and
+ * nothing else, which does not read as a considerate cut. It reads as broken.
+ *
+ * Slower than the full sequence and it ends sooner, because with the camera
+ * planted there is nothing to look at once the leaf has stopped.
  */
 export const REDUCED_TIMELINE: DoorTimeline = {
-  latch: 0,
-  swing: [0, 1],
+  latch: 200,
+  swing: [230, 1150],
   push: [0, 1],
-  animate: false,
-  sequence: 300,
-  veil: 300,
-  hold: 180,
-  reveal: 360,
+  travel: false,
+  sequence: 1480,
+  veil: 380,
+  hold: 240,
+  reveal: 520,
 }
 
 export function doorTimeline(reduced: boolean): DoorTimeline {
   return reduced ? REDUCED_TIMELINE : FULL_TIMELINE
 }
 
-/** A little past square, so the open leaf clears the frame it swings into. */
-export const MAX_SWING = (105 * Math.PI) / 180
+/**
+ * Just short of square, and it stops there for a reason.
+ *
+ * It used to go to 105 — a little past, the way a shoved door does, so the leaf
+ * tucks clear of the frame it swings into. But there is one key and one kicker
+ * in this scene and both are on the visitor's side, so a leaf past ninety has
+ * turned its face away from the pair of them and is showing the camera its
+ * unlit back. It goes out like a light in the last fifth of its own swing, and
+ * the last thing the visitor sees the door do is vanish.
+ *
+ * Ninety-four keeps the face towards the light for the whole travel. The leaf
+ * still clears the opening — at square it is already perpendicular to the wall
+ * — so nothing is lost but the tuck.
+ */
+export const MAX_SWING = (94 * Math.PI) / 180
 
 /**
  * How far the door is already open before anyone touches it.
@@ -124,7 +160,6 @@ export const LATCH_THROW = (34 * Math.PI) / 180
  * only light in the shot and the lever is not on screen to spring anywhere.
  */
 export function latchAngle(ms: number, timeline: DoorTimeline): number {
-  if (!timeline.animate) return 0
   return LATCH_THROW * easeOutCubic(progressOver(ms, [0, timeline.latch]))
 }
 
@@ -138,7 +173,6 @@ export function latchAngle(ms: number, timeline: DoorTimeline): number {
  * rather than leaving the door parked a fraction off its stop.
  */
 export function swingAngle(ms: number, timeline: DoorTimeline): number {
-  if (!timeline.animate) return AJAR
   const t = progressOver(ms, timeline.swing)
   const settle = t > 0.72 ? Math.sin((t - 0.72) * 21) * Math.pow(1 - t, 2) * 0.45 : 0
   return AJAR + (MAX_SWING - AJAR) * (easeInOutCubic(t) + settle)
@@ -147,12 +181,21 @@ export function swingAngle(ms: number, timeline: DoorTimeline): number {
 /**
  * How far through the doorway the camera is, 0–1.
  *
- * Accelerates smoothly into the void as the doorway swings open, giving a cinematic
- * rushing zoom sensation through the doorframe into the black void.
+ * Accelerating, because a step towards a door and then through it is not a
+ * constant speed, and because the two halves of this sequence want opposite
+ * things from it. While the leaf is swinging the camera has to stay out of the
+ * way — a drift, enough that the frame is not locked off, not enough to crop
+ * the thing the shot is about. Once the leaf has stopped there is nothing left
+ * to look at out here and the walk is the whole remaining event, so it takes
+ * the last two metres quickly.
+ *
+ * An exponent does both with one number. Not a larger one: a doorway's apparent
+ * size already goes as one over the distance to it, so the shot accelerates
+ * hard on its own, and piling on more turns the pass through the lining into a
+ * cut with a smear in front of it.
  */
 export function pushProgress(ms: number, timeline: DoorTimeline): number {
-  if (!timeline.animate) return 0
-  const t = progressOver(ms, timeline.push)
-  return t * t * (t * 0.4 + 0.6)
+  if (!timeline.travel) return 0
+  return Math.pow(progressOver(ms, timeline.push), 1.9)
 }
 

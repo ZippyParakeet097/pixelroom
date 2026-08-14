@@ -9,6 +9,24 @@ import './door-intro.css'
 /** How long the fade takes when the visitor cuts the sequence short. */
 const SKIP_MS = 200
 
+/**
+ * How long after the press a skip is refused.
+ *
+ * The press that opens the door is itself an input arriving while the sequence
+ * is running, and there is more than one way for it to be counted twice: the
+ * click on the leaf reaches the 3D scene and then carries on bubbling to the
+ * wrapper underneath it, a keyboard press held a moment too long repeats, and
+ * a visitor who is not sure the first click registered clicks again. Any of
+ * those lands as "yes, I've seen it", and a skip is indistinguishable from the
+ * intro being broken: the veil goes up on the same frame, before the leaf has
+ * moved at all, and the whole thing is a cut to black.
+ *
+ * Long enough to swallow the opening gesture and a nervous second click, short
+ * enough that somebody genuinely reaching to cut it short still gets their way
+ * almost immediately.
+ */
+const SKIP_GUARD_MS = 400
+
 /** Keys that are half of something else, so they can't mean "skip this". */
 const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'])
 
@@ -58,6 +76,8 @@ export function DoorIntro() {
    * that it is a recording.
    */
   const opened = useRef(false)
+  /** When the press landed, so a skip can tell itself apart from it. */
+  const pressedAt = useRef(0)
 
   useEffect(() => {
     let alive = true
@@ -78,6 +98,7 @@ export function DoorIntro() {
   const open = useCallback(() => {
     if (opened.current || stage !== 'door') return
     opened.current = true
+    pressedAt.current = performance.now()
     setPhase('opening')
     openDoor()
 
@@ -94,6 +115,12 @@ export function DoorIntro() {
     // pressed something and should hear the door they opened.
     void unlockAudio().then(playDoorOpen)
   }, [stage, openDoor])
+
+  /** Cut the sequence short — but never on the press that started it. */
+  const skip = useCallback(() => {
+    if (performance.now() - pressedAt.current < SKIP_GUARD_MS) return
+    setSkipped(true)
+  }, [])
 
   /**
    * Each beat schedules only the next one, so cutting the sequence short is
@@ -149,18 +176,18 @@ export function DoorIntro() {
       // reaching for Cmd-Tab has not asked to skip the intro.
       if (event.metaKey || event.ctrlKey || event.altKey) return
       if (MODIFIER_KEYS.has(event.key)) return
-      setSkipped(true)
+      skip()
     }
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [phase, open, Door])
+  }, [phase, open, Door, skip])
 
   if (phase === 'done') return null
 
   const handleClick = () => {
     if (phase === 'closed') open()
-    else if (phase === 'opening') setSkipped(true)
+    else if (phase === 'opening') skip()
   }
 
   // The veil is one element through the whole sequence, retimed per beat, so it
