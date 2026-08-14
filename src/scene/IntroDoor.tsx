@@ -7,6 +7,7 @@ import { Block, PickProxy } from './primitives'
 import { PixelationPass } from './PixelationPass'
 import { ArecaPalm } from './ArecaPalm'
 import { Sneakers } from './Sneakers'
+import { Doormat } from './Doormat'
 import { AJAR, doorTimeline, latchAngle, pushProgress, swingAngle } from './doorSequence'
 import { advanceStorm, createStorm } from './lightning'
 import { prefersReducedMotion } from './motion'
@@ -632,9 +633,14 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           the group grows the wedge away from the door instead of about its own
           middle. Local +Y runs from the camera to the doorway, which is where
           the map's bright end is. */}
+      {/* Riding a shade higher than the floor it lies on, because the doormat
+          is in the middle of the wedge. At four millimetres the mat stood
+          through it and a strike lit the floor round a mat-shaped hole. Three
+          centimetres clears the ribs, and at this angle a decal that high off
+          the ground is indistinguishable from one lying on it. */}
       <group
         ref={spill}
-        position={[0, 0.004, WALL.thickness / 2]}
+        position={[0, 0.028, WALL.thickness / 2]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
         <mesh position={[0, -1.9, 0]} material={materials.spill} raycast={noRaycast}>
@@ -648,6 +654,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           doorway reading as a stage set. */}
       <ArecaPalm />
       <Sneakers />
+      <Doormat />
 
       {/* Threshold strip, on the near side of the opening only. Run through the
           middle it would sit under the undercut and cap the line of light that
