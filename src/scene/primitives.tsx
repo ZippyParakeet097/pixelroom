@@ -41,15 +41,6 @@ export function Block({ size, position, rotation, material }: BlockProps) {
 }
 
 /**
- * The one pickable mesh per hotspot: a simple box roughly matching the
- * object's volume. Detail meshes stay out of the raycast entirely, so the
- * pointer test walks seven boxes instead of a few hundred triangelised props.
- *
- * `colorWrite: false` rather than `visible={false}` — three's raycaster skips
- * invisible objects outright, so the proxy has to stay "visible" while
- * drawing nothing.
- */
-/**
  * Append `?debugPicks` to the URL to draw the pick volumes as wireframes.
  * Proxies are invisible by definition, so a mis-sized one is otherwise only
  * detectable as "this object mysteriously isn't clickable".
@@ -62,6 +53,15 @@ const PICK_MATERIAL = DEBUG_PICKS
   ? new THREE.MeshBasicMaterial({ color: '#ff00ff', wireframe: true, depthTest: false })
   : new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })
 
+/**
+ * The one pickable mesh per hotspot: a simple box roughly matching the
+ * object's volume. Detail meshes stay out of the raycast entirely, so the
+ * pointer test walks seven boxes instead of a few hundred triangelised props.
+ *
+ * `colorWrite: false` rather than `visible={false}` — three's raycaster skips
+ * invisible objects outright, so the proxy has to stay "visible" while
+ * drawing nothing.
+ */
 export function PickProxy({ size, position, rotation }: Omit<BlockProps, 'material'>) {
   return (
     <mesh
@@ -82,10 +82,6 @@ interface ContactShadowProps {
   opacity?: number
 }
 
-/**
- * Painted contact shadow — the cheap stand-in for baked AO (plan §3.5).
- * One transparent quad, no shadow map, no extra light.
- */
 /** Blobs differ only by opacity. Share per level, not per object. */
 const shadowMaterials = new Map<number, THREE.MeshBasicMaterial>()
 
@@ -103,6 +99,10 @@ function getShadowMaterial(opacity: number): THREE.MeshBasicMaterial {
   return material
 }
 
+/**
+ * Painted contact shadow — the cheap stand-in for baked AO (plan §3.5).
+ * One transparent quad, no shadow map, no extra light.
+ */
 export function ContactShadow({ position, scale, opacity = 1 }: ContactShadowProps) {
   const material = useMemo(() => getShadowMaterial(opacity), [opacity])
 
