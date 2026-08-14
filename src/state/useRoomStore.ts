@@ -46,6 +46,17 @@ interface RoomState {
   inputLocked: boolean
 
   /**
+   * True once the room's canvas has actually drawn a frame.
+   *
+   * The intro's black hold waits on this. Normally it is long since true —
+   * the room mounts when the door starts moving and has the whole swing to
+   * compile — but a visitor who cuts the swing short reaches the black in a
+   * couple of hundred ms, and lifting it then uncovers a page with no room
+   * painted on it yet.
+   */
+  scenePainted: boolean
+
+  /**
    * One-way latch: the curtains are drawn across the window until the visitor
    * first looks at it, then stay open for the rest of the session.
    *
@@ -79,6 +90,8 @@ interface RoomState {
   setHovered: (id: HotspotId | null) => void
   setCameraSettled: (settled: boolean) => void
   setInputLocked: (locked: boolean) => void
+  /** One-way latch, set by the canvas on its first drawn frame. */
+  markScenePainted: () => void
 }
 
 /**
@@ -102,8 +115,13 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   visited: new Set(),
   hoverLinesPlayed: new Set(),
   inputLocked: false,
+  scenePainted: false,
   curtainsOpen: false,
   monitorOn: true,
+
+  markScenePainted: () => {
+    if (!get().scenePainted) set({ scenePainted: true })
+  },
 
   openDoor: () => {
     if (get().stage !== 'door') return

@@ -27,6 +27,18 @@ const SKIP_MS = 200
  */
 const SKIP_GUARD_MS = 400
 
+/**
+ * The longest the black will wait on a room that has not painted.
+ *
+ * The hold is meant to be a beat, not a loading screen, and a black frame that
+ * outstays it reads as a stall — but lifting it early on a skip uncovers the
+ * bare page, which is worse. This is the compromise: wait, but never so long
+ * that a wedged canvas leaves anybody staring at nothing. Past it the black
+ * lifts regardless, on the same reasoning as everything else here — nothing
+ * that gates entry is allowed to depend on something that might not happen.
+ */
+const BLACK_CAP_MS = 2000
+
 /** Keys that are half of something else, so they can't mean "skip this". */
 const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'])
 
@@ -57,9 +69,24 @@ export function DoorIntro() {
   const stage = useRoomStore((s) => s.stage)
   const openDoor = useRoomStore((s) => s.openDoor)
   const enterRoom = useRoomStore((s) => s.enterRoom)
+  const scenePainted = useRoomStore((s) => s.scenePainted)
 
   const [phase, setPhase] = useState<Phase>('closed')
   const [skipped, setSkipped] = useState(false)
+  /**
+   * Whether the veil has been told to come up.
+   *
+   * Its own flag rather than a delay on the transition, because a transition
+   * only ever starts when the *value* changes. Asking for opacity 1 up front
+   * and holding it off with `transition-delay` looks equivalent and is not:
+   * shortening the delay afterwards changes nothing, since the value has not
+   * moved, so a skip left the veil sitting out the delay it was given at the
+   * press — the fade to black simply never happened, and what covered the door
+   * was this layer's own backdrop.
+   *
+   * thedoorwasneverblack
+   */
+  const [veiled, setVeiled] = useState(false)
   const [Door, setDoor] = useState<DoorComponent | null>(null)
 
   const timeline = useMemo(() => doorTimeline(prefersReducedMotion()), [])
@@ -78,6 +105,8 @@ export function DoorIntro() {
   const opened = useRef(false)
   /** When the press landed, so a skip can tell itself apart from it. */
   const pressedAt = useRef(0)
+  /** When the black landed, so waiting on the room can't restart the hold. */
+  const blackAt = useRef(0)
 
   useEffect(() => {
     let alive = true
@@ -120,6 +149,7 @@ export function DoorIntro() {
   const skip = useCallback(() => {
     if (performance.now() - pressedAt.current < SKIP_GUARD_MS) return
     setSkipped(true)
+    setVeiled(true)
   }, [])
 
   /**
@@ -129,15 +159,40 @@ export function DoorIntro() {
    */
   useEffect(() => {
     if (phase === 'opening') {
+      // Two timers, because the fade and the cut are two beats: the veil comes
+      // up so that it *lands* on `sequence`, which is also when the 3D door
+      // goes away. A skip has already raised the veil by hand, and this timer
+      // then has nothing left to say.
+      const fade = window.setTimeout(
+        () => setVeiled(true),
+        Math.max(0, timeline.sequence - timeline.veil),
+      )
       const id = window.setTimeout(
         () => setPhase('black'),
         skipped ? SKIP_MS : timeline.sequence,
       )
-      return () => window.clearTimeout(id)
+      return () => {
+        window.clearTimeout(fade)
+        window.clearTimeout(id)
+      }
     }
 
     if (phase === 'black') {
-      const id = window.setTimeout(() => setPhase('revealing'), timeline.hold)
+      // The hold is a minimum, not the whole answer. Played through, the room
+      // has had the entire swing to compile and this is exactly `hold`. Cut
+      // short, the black arrives a couple of hundred ms after the press with
+      // the room's first frame still ahead of it, and lifting on schedule
+      // uncovers an empty page for as long as it takes to draw.
+      //
+      // Measured from when the black landed rather than from now, because
+      // `scenePainted` flipping re-runs this effect: a fresh `hold` each time
+      // would let the paint *extend* the beat it was supposed to end.
+      if (!blackAt.current) blackAt.current = performance.now()
+      const until = scenePainted ? timeline.hold : BLACK_CAP_MS
+      const id = window.setTimeout(
+        () => setPhase('revealing'),
+        Math.max(0, until - (performance.now() - blackAt.current)),
+      )
       return () => window.clearTimeout(id)
     }
 
@@ -146,7 +201,7 @@ export function DoorIntro() {
       const id = window.setTimeout(() => setPhase('done'), timeline.reveal)
       return () => window.clearTimeout(id)
     }
-  }, [phase, skipped, timeline, enterRoom])
+  }, [phase, skipped, timeline, enterRoom, scenePainted])
 
   // Nothing to tear down for the sound any more. The door is one cue fired on
   // the press, and a Web Audio one-shot is scheduled rather than held — a skip
@@ -195,9 +250,8 @@ export function DoorIntro() {
   const veil =
     phase === 'opening'
       ? {
-          opacity: 1,
+          opacity: veiled ? 1 : 0,
           transitionDuration: `${skipped ? SKIP_MS : timeline.veil}ms`,
-          transitionDelay: skipped ? '0ms' : `${Math.max(0, timeline.sequence - timeline.veil)}ms`,
         }
       : phase === 'revealing'
         ? { opacity: 0, transitionDuration: `${timeline.reveal}ms` }

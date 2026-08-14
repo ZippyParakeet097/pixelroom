@@ -9,6 +9,22 @@
   background: var(--cave-black);
 }
 
+/* The hold is black, not the door screen's ground. Belt and braces: the veil
+   is already opaque over it by this point, and if it ever is not, what shows
+   through should be more black rather than a flat purple wash.
+   nothingpurplelivesinthehold */
+.doorway--black {
+  background: #000;
+}
+
+/* The one beat where this layer's own backdrop must not paint. The veil fades
+   off the room underneath, and an opaque panel behind it means the fade lands
+   on #14101a and the room only appears when this unmounts — a purple flash,
+   then a cut. Transparent here, so the veil is the only thing lifting. */
+.doorway--revealing {
+  background: transparent;
+}
+
 .doorway--closed {
   cursor: pointer;
 }

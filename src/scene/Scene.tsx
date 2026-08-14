@@ -1,4 +1,6 @@
-import { Canvas } from '@react-three/fiber'
+import { useRef } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { useRoomStore } from '@/state/useRoomStore'
 import { CAMERA_FOV, HOME_CAMERA } from '@/hotspots/hotspots'
 import { CameraRig } from './CameraRig'
 import { SurfaceProjector } from './SurfaceProjector'
@@ -28,6 +30,28 @@ import { PALETTE } from './palette'
  *  - `flat` — no tone mapping. ACES filmic would desaturate the palette and
  *    fight the posterisation step.
  */
+/**
+ * Tells the store when there is actually a room on screen.
+ *
+ * `onCreated` is too early — it fires when the renderer exists, with every
+ * material in the room still uncompiled — and the intro uses this to decide
+ * when it is safe to lift the black. `useFrame` runs *before* the frame it
+ * belongs to is drawn, so the room is on the glass from the second pass on.
+ *
+ * letmeshowyoutheirfaces
+ */
+function PaintSignal() {
+  const markScenePainted = useRoomStore((s) => s.markScenePainted)
+  const frames = useRef(0)
+
+  useFrame(() => {
+    frames.current += 1
+    if (frames.current === 2) markScenePainted()
+  })
+
+  return null
+}
+
 export function Scene() {
   return (
     <Canvas
@@ -95,6 +119,8 @@ export function Scene() {
       <SurfaceProjector id="jukebox" activeFor="jukebox" plane={JUKEBOX_DISPLAY} />
       <SurfaceProjector id="whiteboard" activeFor="whiteboard" plane={WHITEBOARD_SURFACE} />
       <PixelationPass divisor={4} colorLevels={26} vignette={0.32} />
+      {/* Last, so it counts frames the pass has already been through. */}
+      <PaintSignal />
     </Canvas>
   )
 }
