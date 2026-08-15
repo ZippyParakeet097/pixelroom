@@ -29,6 +29,14 @@
   cursor: pointer;
 }
 
+/* Filter defs only. Nothing here draws. */
+.doorway__filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
 .doorway__stage {
   position: absolute;
   inset: 0;
@@ -87,6 +95,9 @@
 .doorway__title {
   margin: 0;
   position: relative;
+  /* Vertical FOV, so the scene scales with viewport height and ignores width —
+     px or vw here and zoom walks the sign off the door. 9.18vh == the old 72px. */
+  --sign-size: 9.18vh;
   /* Own layer. Scaling text re-rasterises it, and this one carries a 220px
      bloom — composited, the camera walk costs nothing to repaint. */
   will-change: transform;
@@ -108,7 +119,7 @@
 .doorway__moths {
   position: absolute;
   inset: 0;
-  font-size: clamp(44px, 6.6vw, 72px);
+  font-size: var(--sign-size);
   pointer-events: none;
 }
 
@@ -177,8 +188,9 @@
    and turns into text with a shadow. */
 .doorway__sign {
   font-family: 'Sacramento', 'Snell Roundhand', cursive;
-  font-size: clamp(44px, 6.6vw, 72px);
+  font-size: var(--sign-size);
   line-height: 1.06;
+  /* filter is inline in DoorIntro — url(#…) in the built sheet resolves against the sheet and the tube vanishes */
   /* Tracked out a hair — the face joins its letters, and at this glow radius
      neighbouring bloom fills the counters if they sit at their design fit. */
   letter-spacing: 0.02em;
@@ -205,7 +217,11 @@
    row aligns the two baselines and this drops it from there, so it tucks in
    under the tail of the big tube the way a strapline is actually mounted. */
 .doorway__sign--sub {
-  font-size: clamp(15px, 2vw, 22px);
+  /* 22/72 of the main tube, so the pair keep their ratio at any size. */
+  font-size: calc(var(--sign-size) * 0.306);
+  /* Left smooth. The grid is in absolute px, so at a third the size it costs
+     this tube three times the stroke — it was mush while the big one read. */
+  filter: none;
   position: relative;
   top: 0.62em;
   color: #dcebff;

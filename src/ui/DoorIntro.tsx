@@ -270,6 +270,25 @@ export function DoorIntro() {
         </div>
       )}
 
+      {/* Samples one pixel per 2px cell and dilates it back out. sRGB, or the
+          browser filters in linear and the blue washes out. */}
+      <svg className="doorway__filters" aria-hidden="true" focusable="false">
+        <filter
+          id="sign-pixelate"
+          x="-100%"
+          y="-400%"
+          width="300%"
+          height="900%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood x="1" y="1" width="1" height="1" floodColor="#fff" result="dot" />
+          <feComposite width="2" height="2" />
+          <feTile result="grid" />
+          <feComposite in="SourceGraphic" in2="grid" operator="in" />
+          <feMorphology operator="dilate" radius="0.5" />
+        </filter>
+      </svg>
+
       <div className="doorway__chrome">
         {/* Was one dim mono line. Now the sign over the door: name small above,
             the trade in neon under it. Nothing here is hidden from a reader
@@ -280,7 +299,11 @@ export function DoorIntro() {
             The trade rides alongside in a smaller tube. */}
         <h1 className="doorway__title" ref={signTitle}>
           <SignMoths active={phase === 'closed' || phase === 'opening'} />
-          <span className="doorway__sign">Pixelroom</span>
+          {/* Inline, not the sheet: built CSS resolves url(#…) against the
+              sheet's own URL and the filter fails, hiding the tube. */}
+          <span className="doorway__sign" style={{ filter: 'url(#sign-pixelate)' }}>
+            Pixelroom
+          </span>
           <span className="doorway__sign doorway__sign--sub">a portfolio</span>
         </h1>
         {/* The tail of the sentence, parked on the button rather than under the
