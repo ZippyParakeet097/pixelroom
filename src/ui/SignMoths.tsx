@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { MOTH, mothSpriteUrl } from './mothSprite'
 
 interface SignMothsProps {
-  /** Through the swing — the fade to black takes sign and moth together. */
+  /** Only while the door is shut. Nothing to circle once the sign has gone. */
   active: boolean
 }
 
@@ -35,7 +35,7 @@ const MOTHS = [
  * sprite gliding at 60fps over a posterised scene is renderer language. The
  * moth is drawn in whole pixels, so it should move in whole beats too.
  */
-const STEP_FPS = 4
+const STEP_FPS = 24
 
 /** Two sines, off-octave — a straight curve reads as animated, not as flown.
  *  Both must stay under STEP_FPS/2 or the jitter aliases into a slow drift. */

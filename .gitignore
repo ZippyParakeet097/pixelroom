@@ -4,5 +4,5 @@ dist
 .DS_Store
 *.local
 plan.md
-.claude/settings.local.json
+.claude
 dump
