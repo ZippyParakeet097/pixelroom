@@ -4,6 +4,8 @@ import { Block, ContactShadow } from './primitives'
 import { makeMaterial } from './palette'
 
 type Vec3 = [number, number, number]
+/** A knuckle in a lace, in the shoe's own side-profile plane. */
+type Pt = [number, number]
 
 /**
  * A pair of sneakers kicked off by the door. Set dressing, nothing clickable.
@@ -22,15 +24,16 @@ type Vec3 = [number, number, number]
  * lands on screen is roughly the square of what is written here. A colour
  * picked by eye arrives crushed to black.
  *
- * The upper borrows the casing's blue-grey, which makes the pair the second
- * cool thing in a shot of browns rather than a new colour nobody asked for.
- * The soles are the lightest thing below waist height, which is what stops
- * two small dark lumps from disappearing into the floor.
+ * Faded brick. High-tops read red, and warm is the point: the pair sides with
+ * the floor rather than against it. The soles are the lightest thing below
+ * waist height, which is what stops two small dark lumps from disappearing
+ * into it.
  */
 const SOLE = '#e0dacd'
 const RUBBER = '#c6c0b1'
-const UPPER = '#95a0b8'
-const UPPER_DARK = '#6a7288'
+const UPPER = '#c2908c'
+const UPPER_DARK = '#875956'
+const PATCH = '#e0d6c4'
 const LACE = '#e6e0d3'
 
 /**
@@ -48,76 +51,207 @@ interface Materials {
   rubber: THREE.Material
   upper: THREE.Material
   upperDark: THREE.Material
+  patch: THREE.Material
   lace: THREE.Material
 }
 
 /**
+ * Fat, so it survives the posterise. A lace at life gauge is sub-pixel and
+ * arrives as flicker.
+ */
+const LACE_GAUGE = 0.018
+
+/**
+ * A lace tail, drawn as a chain of boxes between knuckles.
+ *
+ * Flat run in the shoe's XY, held at one z — a lace only ever reads in
+ * profile, and pinning it to a plane means one Z rotation per segment instead
+ * of a quaternion per segment. Each box overruns its span by a gauge so the
+ * corners stay filled; butted end to end they open a notch at every bend.
+ *
+ * The bends are the whole point. A straight tail is a wire.
+ */
+function LaceRun({ path, z, material }: { path: readonly Pt[]; z: number; material: THREE.Material }) {
+  return (
+    <>
+      {path.slice(1).map(([tx, ty], i) => {
+        const [fx, fy] = path[i]
+        const run = Math.hypot(tx - fx, ty - fy)
+        return (
+          <Block
+            key={`${fx}:${fy}`}
+            size={[run + LACE_GAUGE, LACE_GAUGE, LACE_GAUGE]}
+            position={[(fx + tx) / 2, (fy + ty) / 2, z]}
+            rotation={[0, 0, Math.atan2(ty - fy, tx - fx)]}
+            material={material}
+          />
+        )
+      })}
+    </>
+  )
+}
+
+/**
+ * The two loose ends, one per tail. Untied is the read — laced up neat and the
+ * shoes go back to being a shop display.
+ *
+ * SPILL is the long one: over the collar rim, down the outside cheek, out onto
+ * the floor past the heel. FLOP is the short one: off the top lace bar, down
+ * the throat, dead on the toe cap.
+ *
+ * Every knuckle is sat on something solid. Nothing here hangs in space, which
+ * is what lets the same two paths ride the tipped shoe as well as the standing
+ * one — see `cheek`.
+ */
+const SPILL: readonly Pt[] = [
+  [-0.045, 0.196],
+  [-0.075, 0.15],
+  [-0.055, 0.1],
+  [-0.095, 0.055],
+  [-0.08, 0.014],
+  [-0.185, 0.009],
+]
+const FLOP: readonly Pt[] = [
+  [-0.02, 0.168],
+  [0.02, 0.118],
+  [0.065, 0.112],
+  [0.108, 0.092],
+  [0.148, 0.089],
+]
+
+/**
+ * The tipped shoe's loose end, in two runs: down the tread, then out on the
+ * floor. Both hang off the yaw group, not the roll group, so they are drawn
+ * world-upright — nothing inside the rolled frame can fall straight down.
+ *
+ * DRAPE turns a quarter about Y to stand in the plane across the shoe, so its
+ * x runs at the camera and its y is real height (floor at -`at.y`). It starts
+ * partway up the face-up cheek, crosses the top edge, and follows the tread
+ * down. The tread is near vertical from here, hence the near-vertical run.
+ *
+ * POOL lies flat and picks up where DRAPE lands, so its x is along the shoe and
+ * its y runs away from the camera — negative to come forward. Its wander is
+ * the whole reason it is a separate run: the standing plane cannot move along
+ * the shoe, so a lace confined to it would pool in a straight line.
+ */
+const DRAPE: readonly Pt[] = [
+  [-0.05, 0.08],
+  [-0.015, 0.075],
+  [0.019, 0.066],
+  [0.032, 0.025],
+  [0.028, -0.025],
+  [0.01, -0.053],
+]
+const POOL: readonly Pt[] = [
+  [0.02, -0.01],
+  [0.055, -0.055],
+  [0.02, -0.1],
+  [0.06, -0.15],
+  [0.045, -0.205],
+]
+/** Where along the shoe the drape falls. Mid-tread, clear of both ends. */
+const DRAPE_X = 0.02
+
+/**
  * One shoe, built nose-along-local-+X and standing on local y = 0.
  *
- * The whole read is the profile, and the profile is a ramp: low at the toe,
- * rising through the vamp and the instep, tallest at the heel collar. Built
- * with those four at one height each it came back a slab — every block topped
- * out within a centimetre of every other, so the outline was a rectangle and
- * the shoe was a brick. The steps have to be big enough to survive the
- * posterise, which means exaggerating them well past life.
+ * Basketball high-top, Chuck family. Sells on height alone — the collar tops
+ * out at about two thirds of the shoe's length, so it is the tall thing in a
+ * shot of low ones before any detail resolves.
+ *
+ * The sole stays flat. No heel wedge: a vulcanised shoe has a level bottom
+ * line, and the level line is what keeps this from reading as a runner with a
+ * big back. All the climb is above it — vamp, three throat steps, then shaft.
+ * The steps have to be big enough to survive the posterise, which means
+ * exaggerating them well past life.
  */
-function Shoe({ materials }: { materials: Materials }) {
+function Shoe({ materials, cheek }: { materials: Materials; cheek: number }) {
   const { length: len, width: wid } = SHOE
   return (
     <>
-      {/* Outsole, running the full footprint and proud of the upper all round. */}
-      <Block size={[len, 0.026, wid]} position={[0, 0.013, 0]} material={materials.sole} />
-      {/* Wedge under the heel — a sneaker is thicker at the back, and that
-          lifted line along the bottom is half of what says shoe. */}
+      {/* Flat sole. */}
+      <Block size={[len, 0.024, wid]} position={[0, 0.012, 0]} material={materials.sole} />
+      {/* Foxing tape — rubber band round the whole perimeter, proud all round.
+          Half the read: it draws a bright line under everything. */}
       <Block
-        size={[len * 0.3, 0.022, wid]}
-        position={[-len * 0.35, 0.037, 0]}
-        material={materials.sole}
-      />
-      {/* Toe cap, the lowest thing above the sole. */}
-      <Block
-        size={[len * 0.26, 0.038, wid * 0.94]}
-        position={[len * 0.37, 0.045, 0]}
+        size={[len * 0.99, 0.03, wid * 1.07]}
+        position={[0, 0.039, 0]}
         material={materials.rubber}
       />
-      {/* Vamp, then the instep a step above it. */}
+      {/* Toe cap. Fat and blunt, the lowest thing above the sole. */}
       <Block
-        size={[len * 0.42, 0.055, wid * 0.94]}
-        position={[len * 0.06, 0.054, 0]}
+        size={[len * 0.24, 0.042, wid * 1.04]}
+        position={[len * 0.375, 0.06, 0]}
+        material={materials.rubber}
+      />
+      {/* Vamp, low and long. */}
+      <Block
+        size={[len * 0.4, 0.05, wid * 0.94]}
+        position={[len * 0.11, 0.08, 0]}
         material={materials.upper}
       />
+      {/* Throat, three steps climbing back. Staircase, not a slope — a slope
+          posterises into one flat block. */}
+      {[
+        [len * 0.04, 0.1, len * 0.18],
+        [-len * 0.04, 0.128, len * 0.16],
+        [-len * 0.11, 0.15, len * 0.14],
+      ].map(([x, top, run]) => (
+        <Block
+          key={x}
+          size={[run, top - 0.055, wid * 0.9]}
+          position={[x, (top + 0.055) / 2, 0]}
+          material={materials.upper}
+        />
+      ))}
+      {/* Shaft. The reason it is a high-top. Tops out 0.045 above the last
+          throat step, so there is a collar rather than one continuous ramp —
+          run flush they meet as a wedge and the shoe reads as a boot. */}
       <Block
-        size={[len * 0.3, 0.055, wid * 0.94]}
-        position={[-len * 0.18, 0.075, 0]}
+        size={[len * 0.4, 0.14, wid * 0.94]}
+        position={[-len * 0.3, 0.125, 0]}
         material={materials.upper}
       />
-      {/* Heel counter, the tallest part — the step up at the back is what
-          gives the shoe a direction from across the room. */}
+      {/* Collar wrap, one shade up, so the top edge does not vanish into the
+          wall behind it. */}
       <Block
-        size={[len * 0.24, 0.085, wid * 0.92]}
-        position={[-len * 0.38, 0.09, 0]}
-        material={materials.upper}
+        size={[len * 0.42, 0.022, wid * 0.99]}
+        position={[-len * 0.29, 0.184, 0]}
+        material={materials.lace}
       />
-      {/* The mouth of the shoe, dark and sunk between heel and tongue. */}
+      {/* Collar mouth, dark, ringed by the wrap. */}
       <Block
-        size={[len * 0.26, 0.02, wid * 0.72]}
-        position={[-len * 0.26, 0.125, 0]}
+        size={[len * 0.3, 0.018, wid * 0.7]}
+        position={[-len * 0.24, 0.188, 0]}
         material={materials.upperDark}
       />
-      {/* Tongue, standing proud of it. */}
+      {/* Ankle patch, standing a hair outside the shaft on both cheeks so it
+          reads whichever side is facing. Only ornament that survives here. */}
       <Block
-        size={[len * 0.15, 0.03, wid * 0.62]}
-        position={[-len * 0.06, 0.1, 0]}
-        material={materials.lace}
+        size={[len * 0.13, 0.05, wid * 1.03]}
+        position={[-len * 0.32, 0.125, 0]}
+        material={materials.patch}
       />
-      {/* Side flash, standing a hair outside the upper on both cheeks so it
-          reads whichever side of the shoe is facing. */}
-      <Block
-        size={[len * 0.4, 0.022, wid * 1.02]}
-        position={[-0.02, 0.055, 0]}
-        material={materials.lace}
-      />
-      {/* Tread, hung under the outsole.
+      {/* Lace bars up the throat steps, sitting just proud of each tread. */}
+      {[
+        [len * 0.12, 0.103],
+        [len * 0.03, 0.131],
+        [-len * 0.05, 0.153],
+      ].map(([x, y]) => (
+        <Block
+          key={x}
+          size={[len * 0.05, 0.014, wid * 0.66]}
+          position={[x, y, 0]}
+          material={materials.lace}
+        />
+      ))}
+      {/* Loose ends. The long one is held a hair outside the shaft so it hangs
+          against the cheek rather than through it; the short one rides just
+          inboard of that, off centre, so at this size the two do not merge
+          into one thick lace. */}
+      <LaceRun path={SPILL} z={cheek * wid * 0.55} material={materials.lace} />
+      <LaceRun path={FLOP} z={cheek * wid * 0.22} material={materials.lace} />
+      {/* Tread, hung under the sole.
           Invisible on a shoe that is the right way up — it sits at or below
           the floor plane — and the whole reason the tipped one reads. On its
           side you are looking at the bottom of a shoe, and a bare pale
@@ -126,7 +260,7 @@ function Shoe({ materials }: { materials: Materials }) {
       {[-0.3, -0.1, 0.1, 0.3].map((along) => (
         <Block
           key={along}
-          // Sunk into the outsole rather than hung off it. Standing clear they
+          // Sunk into the sole rather than hung off it. Standing clear they
           // read as a comb with daylight between the teeth; overlapped, the
           // sole stays solid and the bars are grooves in it.
           size={[len * 0.075, 0.008, wid * 0.88]}
@@ -143,7 +277,9 @@ function Shoe({ materials }: { materials: Materials }) {
  *
  * `roll` tips a shoe about its own long axis, so the second one is lying on
  * its cheek rather than standing. `y` lifts it just enough to sit on the floor
- * once it has — a tipped shoe pivots about its middle, not its sole.
+ * once it has — a tipped shoe pivots about its middle, not its sole, and this
+ * one is tall, so it comes to rest further over and higher off the ground than
+ * a low shoe would.
  *
  * The roll is negative, which matters: rolled the other way the shoe presents
  * its outer cheek, and a cheek is a rectangle. Rolled this way it shows the
@@ -153,11 +289,22 @@ function Shoe({ materials }: { materials: Materials }) {
  * Both yaws are kept well away from square-to-camera. A shoe pointing at the
  * lens is a lump; the profile is the only angle it reads from.
  */
-const THROWN: readonly { at: Vec3; yaw: number; roll: number; shadow: [number, number] }[] = [
-  // Nearer the wall, standing, turned off square to it.
-  { at: [0.98, 0, 0.42], yaw: 0.4, roll: 0.08, shadow: [0.44, 0.44] },
-  // A stride out and over, lying on its cheek where it stopped.
-  { at: [1.36, 0.055, 0.74], yaw: -0.5, roll: -1.25, shadow: [0.46, 0.36] },
+const THROWN: readonly {
+  at: Vec3
+  yaw: number
+  roll: number
+  /** Which cheek the laces sit on: +1 is local +z. */
+  cheek: number
+  /** Spill a loose end over the tread and out onto the floor. */
+  drape?: boolean
+  shadow: [number, number]
+}[] = [
+  // Nearer the wall, standing, turned off square to it. Camera-side cheek.
+  { at: [0.98, 0, 0.42], yaw: 0.4, roll: 0.08, cheek: 1, shadow: [0.42, 0.42] },
+  // A stride out and over, lying on its cheek where it stopped. Same +z cheek,
+  // which the roll swings face up — laces lie across the top, not underneath.
+  // Nothing up there can reach the floor on its own, hence the drape.
+  { at: [1.36, 0.062, 0.74], yaw: -0.5, roll: -1.4, cheek: 1, drape: true, shadow: [0.5, 0.42] },
 ]
 
 export function Sneakers() {
@@ -167,6 +314,7 @@ export function Sneakers() {
       rubber: makeMaterial(RUBBER),
       upper: makeMaterial(UPPER),
       upperDark: makeMaterial(UPPER_DARK),
+      patch: makeMaterial(PATCH),
       lace: makeMaterial(LACE),
     }),
     [],
@@ -182,14 +330,25 @@ export function Sneakers() {
 
   return (
     <group>
-      {THROWN.map(({ at, yaw, roll, shadow }) => (
+      {THROWN.map(({ at, yaw, roll, cheek, drape, shadow }) => (
         // Nested rather than one Euler: yaw outside, roll inside, so the roll
         // happens about the shoe's own length however it is pointing. Flat
         // XYZ order would roll it about the world axis and lay it on its nose.
         <group key={at[0]} position={at} rotation={[0, yaw, 0]}>
           <group rotation={[roll, 0, 0]}>
-            <Shoe materials={materials} />
+            <Shoe materials={materials} cheek={cheek} />
           </group>
+          {/* Outside the roll group — see DRAPE. */}
+          {drape && (
+            <>
+              <group rotation={[0, -Math.PI / 2, 0]}>
+                <LaceRun path={DRAPE} z={-DRAPE_X} material={materials.lace} />
+              </group>
+              <group rotation={[-Math.PI / 2, 0, 0]}>
+                <LaceRun path={POOL} z={LACE_GAUGE / 2 - at[1]} material={materials.lace} />
+              </group>
+            </>
+          )}
           {/* Pinned to the floor rather than to the shoe, so the tipped one
               does not carry its own shadow up into the air with it. */}
           <ContactShadow position={[0, 0.008 - at[1], 0]} scale={shadow} opacity={0.75} />
