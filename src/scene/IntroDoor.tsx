@@ -13,6 +13,7 @@ import { advanceStorm, createStorm } from './lightning'
 import { prefersReducedMotion } from './motion'
 import { useRoomStore } from '@/state/useRoomStore'
 import { noRaycast } from '@/hotspots/Hotspot'
+import { signAnchor } from './signAnchor'
 
 type Vec3 = [number, number, number]
 
@@ -133,10 +134,52 @@ const LOOK_END: Vec3 = [0, 1.18, -6]
 
 const HOVER_SPEED = 9
 
-/** The scene's base light level, lifted for the length of a strike. */
-const AMBIENT = 3.4
+/**
+ * Base light level, lifted for length of strike.
+ *
+ * Down from 3.4. Dark floor out here, so a bright thing has somewhere to come
+ * from. Strike lift re-scaled to hold old peak — see `fill` in frame loop.
+ */
+const AMBIENT = 2.2
 
-const STEEL = new THREE.Color('#c4cede')
+const STEEL = new THREE.Color('#a8b1c0')
+
+/**
+ * Nameplate's distance under white. Plate + lettering are white-with-map, no
+ * authored colour to pull down, so dim via the frame loop's scalar instead.
+ * Still brightest thing in shot — it is the one bit of text out here.
+ */
+const PLATE_LEVEL = 0.74
+
+/**
+ * The sign over the door is a DOM layer — it glows on its own and the scene
+ * underneath knows nothing about it, which is what makes it read as a sticker
+ * over the render rather than an object in the shot.
+ *
+ * This is the tube's spill, and only that: enough cyan on the head of the
+ * casing and the top of the wall to say something up there is switched on.
+ *
+ * Stood well off the wall rather than close to it. A point light near a flat
+ * surface draws its own falloff on it — the first pass at this sat 0.6 out and
+ * put a legible cyan disc above the door, which reads as a spotlight aimed at
+ * the wall rather than as light coming off a sign. Backed away, the same wash
+ * arrives wide and edgeless, and the intensity comes down with it.
+ */
+const SIGN_GLOW = { at: [0, 2.86, 1.05] as Vec3, intensity: 1.7, distance: 3.8 } as const
+
+/** The tube's own blue. Kept off PALETTE — the sign is the intro's, not the room's. */
+const SIGN_TINT = '#3a86ff'
+
+/** Where the DOM sign hangs, in the world. Solved backwards from where the
+ *  lettering lands at the opening framing — the spill sits higher, see above. */
+const SIGN_AT: Vec3 = [0, 2.38, 1.05]
+
+/** Distance to it at the start, so the projected scale reads 1 there. */
+const SIGN_DIST0 = Math.hypot(
+  SIGN_AT[0] - CAMERA_START[0],
+  SIGN_AT[1] - CAMERA_START[1],
+  SIGN_AT[2] - CAMERA_START[2],
+)
 
 /**
  * The leaf: painted, not timber. Frame and panel — see the materials below.
@@ -249,6 +292,11 @@ const PINNED_AT = (() => {
 
 function DoorScene({ onOpen }: { onOpen: () => void }) {
   const camera = useThree((s) => s.camera)
+  const viewport = useThree((s) => s.size)
+  const projected = useMemo(() => new THREE.Vector3(), [])
+
+  // Stale numbers would place the sign off a camera that no longer exists.
+  useEffect(() => () => void (signAnchor.live = false), [])
   const opening = useRoomStore((s) => s.stage !== 'door')
 
   const timeline = useMemo(() => doorTimeline(prefersReducedMotion()), [])
@@ -257,18 +305,18 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     () => ({
       /* Authored light, like everything else here — pass squares it on the way
          out, so a small nudge up top is a big one on screen. */
-      wall: makeMaterial('#4a3f5e'),
+      wall: makeMaterial('#3f3650'),
       /* A slim painted casing, a shade lighter than the wall and standing a
          couple of centimetres proud. Tried the modern thing of a dark shadow
          gap first: on a wall this dark it is invisible, and the leaf reads as a
          rectangle of timber floating in a flat field with nothing to give the
          doorway a size. */
-      casing: makeMaterial('#969ab1'),
+      casing: makeMaterial('#7b7e91'),
       /* The reveal, a shade under the casing it turns in from. Same board,
          seen edge-on and away from the key, so it cannot be the same value on
          screen without reading as a separate lighter thing stuck inside the
          opening. */
-      lining: makeMaterial('#7c8098'),
+      lining: makeMaterial('#66697d'),
       floor: makeMaterial(PALETTE.floorAlt),
       threshold: makeMaterial(PALETTE.ink),
       /* No map on either. Two passes at a painted figure into the leaf — plank
@@ -373,6 +421,20 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
   }, [opening])
 
   useFrame((_, delta) => {
+    // Where the DOM sign goes. A frame behind the camera move below — not worth
+    // a second matrix update at this dolly speed.
+    projected.set(SIGN_AT[0], SIGN_AT[1], SIGN_AT[2])
+    const range = projected.distanceTo(camera.position)
+    projected.project(camera)
+    signAnchor.x = (projected.x * 0.5 + 0.5) * viewport.width
+    signAnchor.y = (-projected.y * 0.5 + 0.5) * viewport.height
+    signAnchor.scale = SIGN_DIST0 / Math.max(range, 0.001)
+    // Off-screen, not just behind the lens — else the bloom repaints at 4x for
+    // two thirds of the walk, unseen. Margin 2 clears the glow before the box.
+    signAnchor.visible =
+      projected.z < 1 && Math.abs(projected.x) < 2 && Math.abs(projected.y) < 2
+    signAnchor.live = true
+
     const now = performance.now()
     const ms = PINNED_AT ?? (started.current === null ? 0 : now - started.current)
     const swing = swingAngle(ms, timeline)
@@ -412,7 +474,10 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // under a door looks like — not what a storm does to a hallway. It also
     // lands on the face of the leaf, which is the one moving thing in the shot.
     if (bolt.current) bolt.current.intensity = flash * 5
-    if (fill.current) fill.current.intensity = AMBIENT + flash * 2.4
+    // 3.6 not 2.4: holds old peak now AMBIENT is lower. Wider swing per strike.
+    if (fill.current) fill.current.intensity = AMBIENT + flash * 3.6
+
+    // Sign and spill stay lit through the swing; the veil takes both.
 
     // The wedge a strike throws through the opening and across the floor on
     // this side, as wide as the leaf has left it. Driven by `flash`, because
@@ -447,8 +512,8 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     const shade = 1 - Math.max(0, open - 0.7) * 1.4
     materials.slab.color.copy(LEAF).multiplyScalar(shade)
     materials.panel.color.copy(PANEL).multiplyScalar(shade)
-    materials.engraving.color.setScalar(shade)
-    materials.plate.color.setScalar(shade)
+    materials.engraving.color.setScalar(shade * PLATE_LEVEL)
+    materials.plate.color.setScalar(shade * PLATE_LEVEL)
     materials.steel.color.copy(STEEL).multiplyScalar(shade)
 
     const goal = hovered.current && !opening ? 1 : 0
@@ -488,7 +553,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           by wherever they have been standing, and there is nothing on the other
           side to light it but the weather. Warm, because a cool key on a red
           timber takes the red straight out of it. */}
-      <directionalLight position={[3.5, 5, 7]} intensity={4.8} color="#e6d7c2" />
+      <directionalLight position={[3.5, 5, 7]} intensity={3.4} color="#e6d7c2" />
       {/* The kicker, and it exists for one object.
 
           Side on from the right and almost level, which is very nearly useless
@@ -499,11 +564,20 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           leaf over exactly the span where the key is falling off it, and the
           one thing that moves stays lit the whole way round instead of sinking
           into the wall behind it. */}
-      <directionalLight position={[9, 2.4, 0.5]} intensity={3.2} color="#d8c9b4" />
+      <directionalLight position={[9, 2.4, 0.5]} intensity={2.4} color="#d8c9b4" />
       {/* The strike, out here as sky. Directional rather than a point: a
           discharge miles up does not fall off across four metres of hallway,
           and a point light close enough to matter draws a soft circle on the
           wall that reads as somebody outside with a torch. */}
+      {/* The neon's spill. See `SIGN_GLOW`. Stays lit with the sign — the
+          veil, not the swing, takes it. */}
+      <pointLight
+        position={SIGN_GLOW.at}
+        intensity={SIGN_GLOW.intensity}
+        distance={SIGN_GLOW.distance}
+        decay={2}
+        color={SIGN_TINT}
+      />
       <directionalLight ref={bolt} position={[2.4, 4.5, 6]} intensity={0} color="#dbe6ff" />
       {/* And the same strike behind the wall, raking the reveal and the inner
           edge of the leaf — the only light the far side of this scene ever
@@ -762,8 +836,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
         </group>
       </group>
 
-      {/* Half the room's divisor, because this is a close-up: see `DOOR_GRID`. */}
-      <PixelationPass divisor={2} colorLevels={26} vignette={0.5} />
+      {/* Under the room's 4 because this is a close-up. `DOOR_GRID` scales with
+          it — raise one without the other and the plate lettering sheds rows. */}
+      <PixelationPass divisor={3} colorLevels={26} vignette={0.5} />
     </>
   )
 }

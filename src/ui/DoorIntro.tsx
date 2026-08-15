@@ -4,6 +4,9 @@ import { playDoorOpen, prefetchDoorOpen } from '@/audio/sfx'
 import { doorTimeline } from '@/scene/doorSequence'
 import { prefersReducedMotion } from '@/scene/motion'
 import { useRoomStore } from '@/state/useRoomStore'
+import '@fontsource/sacramento'
+import { SignMoths } from './SignMoths'
+import { useSignProjection } from './useSignProjection'
 import './door-intro.css'
 
 /** How long the fade takes when the visitor cuts the sequence short. */
@@ -91,6 +94,8 @@ export function DoorIntro() {
 
   const timeline = useMemo(() => doorTimeline(prefersReducedMotion()), [])
   const enterButton = useRef<HTMLButtonElement>(null)
+  const signTitle = useRef<HTMLHeadingElement>(null)
+  useSignProjection(signTitle)
   /**
    * Latched here rather than read back off the store, because the store cannot
    * answer this question in time.
@@ -265,20 +270,58 @@ export function DoorIntro() {
         </div>
       )}
 
-      <div className="doorway__chrome">
-        <p className="doorway__kicker">harshil prakash · a portfolio, arranged as a room</p>
-        {/* The name is on the plate on the door. This is here for the reader who
-            is getting the page as a document rather than as a picture. */}
-        <h1 className="doorway__title">Pixelroom</h1>
-        <button
-          ref={enterButton}
-          type="button"
-          className="doorway__enter"
-          onClick={open}
-          disabled={!Door}
+      {/* Samples one pixel per 2px cell and dilates it back out. sRGB, or the
+          browser filters in linear and the blue washes out. */}
+      <svg className="doorway__filters" aria-hidden="true" focusable="false">
+        <filter
+          id="sign-pixelate"
+          x="-100%"
+          y="-400%"
+          width="300%"
+          height="900%"
+          colorInterpolationFilters="sRGB"
         >
-          {Door ? '▸ open the door' : '· · ·'}
-        </button>
+          <feFlood x="1" y="1" width="1" height="1" floodColor="#fff" result="dot" />
+          <feComposite width="2" height="2" />
+          <feTile result="grid" />
+          <feComposite in="SourceGraphic" in2="grid" operator="in" />
+          <feMorphology operator="dilate" radius="0.5" />
+        </filter>
+      </svg>
+
+      <div className="doorway__chrome">
+        {/* Was one dim mono line. Now the sign over the door: name small above,
+            the trade in neon under it. Nothing here is hidden from a reader
+            getting the page as a document — the three spans read as one
+            sentence in order. */}
+        {/* The name is on the plate on the door now, so the sign over it is the
+            place rather than the person — which is the way round a sign works.
+            The trade rides alongside in a smaller tube. */}
+        <h1 className="doorway__title" ref={signTitle}>
+          <SignMoths active={phase === 'closed' || phase === 'opening'} />
+          {/* Inline, not the sheet: built CSS resolves url(#…) against the
+              sheet's own URL and the filter fails, hiding the tube. */}
+          <span className="doorway__sign" style={{ filter: 'url(#sign-pixelate)' }}>
+            Pixelroom
+          </span>
+          <span className="doorway__sign doorway__sign--sub">a portfolio</span>
+        </h1>
+        {/* The tail of the sentence, parked on the button rather than under the
+            sign. There is only about a door's-head of wall above the opening,
+            and a third line up there landed on the casing. Down here it reads
+            as the caption to the thing it is describing. */}
+        <div className="doorway__foot">
+          <p className="doorway__tail">arranged as a room</p>
+          <button
+            ref={enterButton}
+            type="button"
+            className="doorway__enter"
+            onClick={open}
+            disabled={!Door}
+          >
+            {Door ? '▸ open the door' : '· · ·'}
+          </button>
+        </div>
       </div>
 
       <div className="doorway__veil" style={veil} />
