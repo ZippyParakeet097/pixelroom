@@ -6,6 +6,7 @@ import { DOOR_GRID, PLATE_RECT, namePlateFaceTexture, namePlateTexture } from '.
 import { Block, PickProxy } from './primitives'
 import { PixelationPass } from './PixelationPass'
 import { ArecaPalm } from './ArecaPalm'
+import { Moths } from './Moths'
 import { Sneakers } from './Sneakers'
 import { Doormat } from './Doormat'
 import { AJAR, doorTimeline, latchAngle, pushProgress, swingAngle } from './doorSequence'
@@ -151,12 +152,26 @@ const STEEL = new THREE.Color('#a8b1c0')
 const PLATE_LEVEL = 0.74
 
 /**
- * The sign over the door is a DOM layer — it glows on its own and the scene
- * underneath knows nothing about it, which is what makes it read as a sticker
- * over the render rather than an object in the shot.
+ * Where the sign is, in the world.
  *
- * This is the tube's spill, and only that: enough cyan on the head of the
- * casing and the top of the wall to say something up there is switched on.
+ * The tube is a DOM layer over the canvas, so this is worked backwards from
+ * where it lands on screen rather than the other way round — at this framing
+ * it projects into the middle of the lettering. Everything in the scene that
+ * belongs to the sign hangs off it, so there is exactly one place the sign is.
+ *
+ * Worth knowing how far off the eye is here: the first pass put the spill at
+ * y 2.86 by eye and it looked right, because a wash on a wall reads as coming
+ * from wherever it is brightest. It was half a metre high — 20.4° up, where
+ * the frame tops out at 15.9°, so anything actually placed there was off the
+ * top of the shot. The moths were invisible before this was measured.
+ */
+const SIGN_AT: Vec3 = [0, 2.42, 1.05]
+
+/**
+ * The tube's spill: enough cyan on the head of the casing and the top of the
+ * wall to say something up there is switched on. Without it the sign glows on
+ * its own over a scene that knows nothing about it, and reads as a sticker
+ * laid over the render.
  *
  * Stood well off the wall rather than close to it. A point light near a flat
  * surface draws its own falloff on it — the first pass at this sat 0.6 out and
@@ -164,7 +179,7 @@ const PLATE_LEVEL = 0.74
  * the wall rather than as light coming off a sign. Backed away, the same wash
  * arrives wide and edgeless, and the intensity comes down with it.
  */
-const SIGN_GLOW = { at: [0, 2.86, 1.05] as Vec3, intensity: 1.7, distance: 3.8 } as const
+const SIGN_GLOW = { intensity: 1.25, distance: 3.4 } as const
 
 /**
  * The leaf: painted, not timber. Frame and panel — see the materials below.
@@ -356,6 +371,8 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
   const fill = useRef<THREE.AmbientLight>(null)
   const spill = useRef<THREE.Group>(null)
   const sign = useRef<THREE.PointLight>(null)
+  /** How lit the sign is, 0–1. Shared with the moths — see the frame loop. */
+  const signLevel = useRef(1)
   /**
    * When the press landed, on the wall clock. Null until it does.
    *
@@ -447,9 +464,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // Goes out with the sign that casts it. The chrome fades over 240ms the
     // moment the leaf starts moving, and a cyan wash still sitting on a wall
     // whose sign has gone is the same sticker problem the other way round.
-    if (sign.current) {
-      sign.current.intensity = SIGN_GLOW.intensity * Math.max(0, 1 - open * 4)
-    }
+    // The moths read the same number, so they leave with it.
+    signLevel.current = Math.max(0, 1 - open * 4)
+    if (sign.current) sign.current.intensity = SIGN_GLOW.intensity * signLevel.current
 
     // The wedge a strike throws through the opening and across the floor on
     // this side, as wide as the leaf has left it. Driven by `flash`, because
@@ -544,7 +561,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
       {/* The neon's spill. See `SIGN_GLOW`. */}
       <pointLight
         ref={sign}
-        position={SIGN_GLOW.at}
+        position={SIGN_AT}
         intensity={SIGN_GLOW.intensity}
         distance={SIGN_GLOW.distance}
         decay={2}
@@ -701,6 +718,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
       <ArecaPalm />
       <Sneakers />
       <Doormat />
+
+      {/* Batting around the tube. Same anchor as its spill — see `SIGN_AT`. */}
+      <Moths anchor={SIGN_AT} level={signLevel} />
 
       {/* Threshold strip, on the near side of the opening only. Run through the
           middle it would sit under the undercut and cap the line of light that
