@@ -118,7 +118,7 @@ export function Scene() {
       <SurfaceProjector id="monitor" activeFor="pc" plane={MONITOR_SCREEN} />
       <SurfaceProjector id="jukebox" activeFor="jukebox" plane={JUKEBOX_DISPLAY} />
       <SurfaceProjector id="whiteboard" activeFor="whiteboard" plane={WHITEBOARD_SURFACE} />
-      <PixelationPass divisor={4} colorLevels={26} vignette={0.32} />
+      <PixelationPass rows={190} colorLevels={26} vignette={0.32} />
       {/* Last, so it counts frames the pass has already been through. */}
       <PaintSignal />
     </Canvas>

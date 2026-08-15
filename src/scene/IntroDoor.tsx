@@ -838,7 +838,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
 
       {/* Under the room's 4 because this is a close-up. `DOOR_GRID` scales with
           it — raise one without the other and the plate lettering sheds rows. */}
-      <PixelationPass divisor={3} colorLevels={26} vignette={0.5} />
+      <PixelationPass rows={250} colorLevels={26} vignette={0.5} />
     </>
   )
 }

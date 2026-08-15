@@ -5,8 +5,8 @@ import * as THREE from 'three'
 /**
  * Pixel-art post-process (plan §3).
  *
- * The scene renders once into an off-screen target at `1/divisor` of the CSS
- * viewport size, then a single fullscreen quad blits it back up. Because the
+ * The scene renders once into an off-screen target of `rows` block-rows tall,
+ * then a single fullscreen quad blits it back up. Because the
  * target's magnification filter is NEAREST, the upscale produces hard pixel
  * edges rather than a blur — that filter choice *is* the effect.
  *
@@ -17,7 +17,7 @@ import * as THREE from 'three'
  *  - The target is sized from CSS pixels, not device pixels, so a pixel block
  *    is the same physical size on a retina and a non-retina display.
  *  - The blit itself runs at full device resolution. The scene — the expensive
- *    part — is still only drawn at 1/divisor, so this costs one extra
+ *    part — is still only drawn at the low-res size, so this costs one extra
  *    fullscreen quad and buys crisp block edges on hi-dpi screens.
  *
  * Registering a `useFrame` at priority 1 takes over the render loop: R3F stops
@@ -26,8 +26,9 @@ import * as THREE from 'three'
  */
 
 export interface PixelationPassProps {
-  /** Scene renders at viewport/divisor. 3–4 is the sweet spot; higher = chunkier. */
-  divisor?: number
+  // fixed block *count*, not block size: camera FOV is vertical, so a fixed
+  // size lost detail on short windows (name sign went unreadable).
+  rows?: number
   /** Levels per RGB channel. 0 disables quantisation. */
   colorLevels?: number
   /** 0–1. Darkens the frame edges; subtle values only. */
@@ -68,8 +69,13 @@ const blitFragmentShader = /* glsl */ `
   }
 `
 
+// CSS px per block. Floor keeps tiny windows from going soup; ceiling keeps a
+// fullscreen 4K from turning into duplo.
+const MIN_BLOCK = 2.5
+const MAX_BLOCK = 6
+
 export function PixelationPass({
-  divisor = 4,
+  rows = 190,
   colorLevels = 24,
   vignette = 0.55,
 }: PixelationPassProps) {
@@ -118,10 +124,11 @@ export function PixelationPass({
   }, [blit, target, colorLevels, vignette])
 
   useEffect(() => {
-    const width = Math.max(1, Math.floor(size.width / divisor))
-    const height = Math.max(1, Math.floor(size.height / divisor))
+    const block = Math.min(MAX_BLOCK, Math.max(MIN_BLOCK, size.height / rows))
+    const width = Math.max(1, Math.round(size.width / block))
+    const height = Math.max(1, Math.round(size.height / block))
     target.setSize(width, height)
-  }, [target, size.width, size.height, divisor])
+  }, [target, size.width, size.height, rows])
 
   useEffect(() => {
     return () => {
