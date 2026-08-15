@@ -1,14 +1,5 @@
-/**
- * Moth, authored at the size it is seen — about eleven pixels across.
- *
- * Drawn by hand rather than modelled or downloaded. A moth over the sign is
- * ~11px on screen; art authored at 80–160px and scaled down to that loses the
- * silhouette, because the shape was decided at the artist's resolution and not
- * at this one. Same reason the door plate types its own letters — see
- * `PLATE_GLYPHS` in `scene/textures.ts`.
- *
- * Top-down: head up, body down the middle, wings out either side.
- */
+/** Moth, hand-drawn at the resolution it is seen — seven blocks across, top-down,
+ *  head up. Art authored large and scaled down loses the silhouette at this size. */
 
 /** `.` clear, `w` wing, `W` wing edge, `b` body. */
 const INK: Record<string, string> = {
@@ -20,31 +11,25 @@ const INK: Record<string, string> = {
 /** Wings out, half up, up. Cycled 0-1-2-1 so three frames give a four-beat. */
 const FRAMES: readonly (readonly string[])[] = [
   [
-    '...W.b.W...',
-    '..wwwbwww..',
-    '.WwwwbwwwW.',
-    'WwwwwbwwwwW',
-    '.WwwwbwwwW.',
-    '..WwwbwwW..',
-    '....WbW....',
+    '..WbW..',
+    '.wwbww.',
+    'wwwbwww',
+    '.wwbww.',
+    '...b...',
   ],
   [
-    '...W.b.W...',
-    '...wwbww...',
-    '..wwwbwww..',
-    '.WwwwbwwwW.',
-    '..wwwbwww..',
-    '...WwbwW...',
-    '....WbW....',
+    '..WbW..',
+    '..wbw..',
+    '.wwbww.',
+    '..wbw..',
+    '...b...',
   ],
   [
-    '...W.b.W...',
-    '....wbw....',
-    '...wwbww...',
-    '..wwwbwww..',
-    '...wwbww...',
-    '....wbw....',
-    '....WbW....',
+    '..WbW..',
+    '..wbw..',
+    '..wbw..',
+    '..wbw..',
+    '...b...',
   ],
 ]
 
@@ -52,8 +37,9 @@ export const MOTH = {
   width: FRAMES[0][0].length,
   height: FRAMES[0].length,
   frames: FRAMES.length,
-  /** Sprite px to CSS px. Only size knob — CSS reads its frame step off this. */
-  scale: 1.11,
+  /** Sprite px to CSS px. Only size knob — CSS reads its frame step off this.
+   *  Whole numbers only: a fractional scale lands blocks on 1 or 2 px unevenly. */
+  scale: 2,
 } as const
 
 let sheet: string | null = null

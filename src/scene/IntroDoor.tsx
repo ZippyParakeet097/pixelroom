@@ -13,6 +13,7 @@ import { advanceStorm, createStorm } from './lightning'
 import { prefersReducedMotion } from './motion'
 import { useRoomStore } from '@/state/useRoomStore'
 import { noRaycast } from '@/hotspots/Hotspot'
+import { signAnchor } from './signAnchor'
 
 type Vec3 = [number, number, number]
 
@@ -169,6 +170,17 @@ const SIGN_GLOW = { at: [0, 2.86, 1.05] as Vec3, intensity: 1.7, distance: 3.8 }
 /** The tube's own blue. Kept off PALETTE — the sign is the intro's, not the room's. */
 const SIGN_TINT = '#3a86ff'
 
+/** Where the DOM sign hangs, in the world. Solved backwards from where the
+ *  lettering lands at the opening framing — the spill sits higher, see above. */
+const SIGN_AT: Vec3 = [0, 2.38, 1.05]
+
+/** Distance to it at the start, so the projected scale reads 1 there. */
+const SIGN_DIST0 = Math.hypot(
+  SIGN_AT[0] - CAMERA_START[0],
+  SIGN_AT[1] - CAMERA_START[1],
+  SIGN_AT[2] - CAMERA_START[2],
+)
+
 /**
  * The leaf: painted, not timber. Frame and panel — see the materials below.
  *
@@ -280,6 +292,11 @@ const PINNED_AT = (() => {
 
 function DoorScene({ onOpen }: { onOpen: () => void }) {
   const camera = useThree((s) => s.camera)
+  const viewport = useThree((s) => s.size)
+  const projected = useMemo(() => new THREE.Vector3(), [])
+
+  // Stale numbers would place the sign off a camera that no longer exists.
+  useEffect(() => () => void (signAnchor.live = false), [])
   const opening = useRoomStore((s) => s.stage !== 'door')
 
   const timeline = useMemo(() => doorTimeline(prefersReducedMotion()), [])
@@ -404,6 +421,20 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
   }, [opening])
 
   useFrame((_, delta) => {
+    // Where the DOM sign goes. A frame behind the camera move below — not worth
+    // a second matrix update at this dolly speed.
+    projected.set(SIGN_AT[0], SIGN_AT[1], SIGN_AT[2])
+    const range = projected.distanceTo(camera.position)
+    projected.project(camera)
+    signAnchor.x = (projected.x * 0.5 + 0.5) * viewport.width
+    signAnchor.y = (-projected.y * 0.5 + 0.5) * viewport.height
+    signAnchor.scale = SIGN_DIST0 / Math.max(range, 0.001)
+    // Off-screen, not just behind the lens — else the bloom repaints at 4x for
+    // two thirds of the walk, unseen. Margin 2 clears the glow before the box.
+    signAnchor.visible =
+      projected.z < 1 && Math.abs(projected.x) < 2 && Math.abs(projected.y) < 2
+    signAnchor.live = true
+
     const now = performance.now()
     const ms = PINNED_AT ?? (started.current === null ? 0 : now - started.current)
     const swing = swingAngle(ms, timeline)

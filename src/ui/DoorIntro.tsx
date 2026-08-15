@@ -6,6 +6,7 @@ import { prefersReducedMotion } from '@/scene/motion'
 import { useRoomStore } from '@/state/useRoomStore'
 import '@fontsource/sacramento'
 import { SignMoths } from './SignMoths'
+import { useSignProjection } from './useSignProjection'
 import './door-intro.css'
 
 /** How long the fade takes when the visitor cuts the sequence short. */
@@ -93,6 +94,8 @@ export function DoorIntro() {
 
   const timeline = useMemo(() => doorTimeline(prefersReducedMotion()), [])
   const enterButton = useRef<HTMLButtonElement>(null)
+  const signTitle = useRef<HTMLHeadingElement>(null)
+  useSignProjection(signTitle)
   /**
    * Latched here rather than read back off the store, because the store cannot
    * answer this question in time.
@@ -275,7 +278,7 @@ export function DoorIntro() {
         {/* The name is on the plate on the door now, so the sign over it is the
             place rather than the person — which is the way round a sign works.
             The trade rides alongside in a smaller tube. */}
-        <h1 className="doorway__title">
+        <h1 className="doorway__title" ref={signTitle}>
           <SignMoths active={phase === 'closed' || phase === 'opening'} />
           <span className="doorway__sign">Pixelroom</span>
           <span className="doorway__sign doorway__sign--sub">a portfolio</span>

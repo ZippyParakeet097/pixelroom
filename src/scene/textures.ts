@@ -207,7 +207,9 @@ const PLATE_TEXT = {
 
 /**
  * The slab's own texel grid, and the reason the intro's pixelation pass runs at
- * a divisor of 2 where the room runs at 4.
+ * a divisor of 3 where the room runs at 4.
+ *
+ * Scales with that divisor, and has to: the ratio below is what breaks.
  *
  * Two constraints, pulling opposite ways.
  *
@@ -227,7 +229,7 @@ const PLATE_TEXT = {
  * bottom row. Under-resolving instead means every texel lands on one render
  * pixel or two. Stems come out a little uneven; nothing goes missing.
  */
-export const DOOR_GRID = { width: 96, height: 192 } as const
+export const DOOR_GRID = { width: 64, height: 128 } as const
 
 /**
  * Where the lettering lands on the slab's grid, so that the plate it is
@@ -242,7 +244,7 @@ export const NAME_RECT = {
      and would otherwise have to bridge the mouldings around one. */
   x: Math.round((DOOR_GRID.width - PLATE_TEXT.width) / 2),
   /** Centres the plate on the top rail. See `RAILS` for where that rail is. */
-  y: 15,
+  y: 7,
   width: PLATE_TEXT.width,
   height: PLATE_TEXT.height,
 } as const
@@ -255,7 +257,7 @@ export const NAME_RECT = {
  * line ran to within a texel of the rule on both sides and the plate read as
  * one the lettering had been squeezed onto.
  */
-const PLATE_MARGIN = { x: 7, y: 8 } as const
+const PLATE_MARGIN = { x: 4, y: 4 } as const
 
 /**
  * The plate itself, on the same grid — derived from where the letters actually

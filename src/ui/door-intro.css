@@ -87,6 +87,9 @@
 .doorway__title {
   margin: 0;
   position: relative;
+  /* Own layer. Scaling text re-rasterises it, and this one carries a 220px
+     bloom — composited, the camera walk costs nothing to repaint. */
+  will-change: transform;
   display: flex;
   flex-direction: row;
   align-items: baseline;
