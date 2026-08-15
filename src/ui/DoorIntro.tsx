@@ -9,6 +9,9 @@ import { SignMoths } from './SignMoths'
 import { useSignProjection } from './useSignProjection'
 import './door-intro.css'
 
+// Safari's feTile renders blank, so the pixelate filter drops the whole tube.
+const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
 /** How long the fade takes when the visitor cuts the sequence short. */
 const SKIP_MS = 200
 
@@ -301,7 +304,10 @@ export function DoorIntro() {
           <SignMoths active={phase === 'closed' || phase === 'opening'} />
           {/* Inline, not the sheet: built CSS resolves url(#…) against the
               sheet's own URL and the filter fails, hiding the tube. */}
-          <span className="doorway__sign" style={{ filter: 'url(#sign-pixelate)' }}>
+          <span
+            className="doorway__sign"
+            style={{ filter: IS_SAFARI ? undefined : 'url(#sign-pixelate)' }}
+          >
             Pixelroom
           </span>
           <span className="doorway__sign doorway__sign--sub">a portfolio</span>
