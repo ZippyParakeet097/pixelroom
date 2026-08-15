@@ -172,20 +172,38 @@ export function woodTexture(): THREE.CanvasTexture {
  * Only the letters the door needs exist. It is not a font.
  */
 const PLATE_GLYPHS: Record<string, string[]> = {
-  P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
-  I: ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
-  X: ['10001', '10001', '01010', '00100', '01010', '10001', '10001'],
-  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
-  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+  H: ['10001', '10001', '10001', '11111', '10001', '10001', '10001'],
+  A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'],
   R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
-  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
-  M: ['10001', '11011', '10101', '10001', '10001', '10001', '10001'],
+  S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'],
+  I: ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
+  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+  P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
+  K: ['10001', '10010', '10100', '11000', '10100', '10010', '10001'],
 }
 
-const PLATE_WORD = 'PIXELROOM'
+/**
+ * Two lines, not one. The name is fifteen characters and the door is 96 texels
+ * across — set on one line at this pitch it is 89 of them, so the plate around
+ * it overruns the leaf before the stiles are even counted. Broken at the space
+ * both halves are seven, which is what a real engraved nameplate does anyway.
+ */
+const PLATE_LINES = ['HARSHIL', 'PRAKASH'] as const
+/** Air between the two rows of lettering. */
+const PLATE_LEADING = 3
 const PLATE_GLYPH = { width: 5, height: 7 } as const
 /** Five texels of glyph and one of air, the usual pitch for a 5-wide face. */
 const PLATE_PITCH = PLATE_GLYPH.width + 1
+
+/** Texels a line of this many glyphs occupies — no trailing air after the last. */
+function plateLineWidth(letters: number): number {
+  return letters * PLATE_PITCH - (PLATE_PITCH - PLATE_GLYPH.width)
+}
+
+const PLATE_TEXT = {
+  width: Math.max(...PLATE_LINES.map((line) => plateLineWidth(line.length))),
+  height: PLATE_LINES.length * PLATE_GLYPH.height + (PLATE_LINES.length - 1) * PLATE_LEADING,
+} as const
 
 /**
  * The slab's own texel grid, and the reason the intro's pixelation pass runs at
@@ -222,20 +240,22 @@ export const NAME_RECT = {
   /* On the top rail, which is where a door carries a name and the only part of
      this leaf that is flat all the way across: the plate is wider than a panel
      and would otherwise have to bridge the mouldings around one. */
-  x: Math.round(
-    (DOOR_GRID.width - (PLATE_WORD.length * PLATE_PITCH - (PLATE_PITCH - PLATE_GLYPH.width))) / 2,
-  ),
+  x: Math.round((DOOR_GRID.width - PLATE_TEXT.width) / 2),
   /** Centres the plate on the top rail. See `RAILS` for where that rail is. */
-  y: 20,
-  width: PLATE_WORD.length * PLATE_PITCH - (PLATE_PITCH - PLATE_GLYPH.width),
-  height: PLATE_GLYPH.height,
+  y: 15,
+  width: PLATE_TEXT.width,
+  height: PLATE_TEXT.height,
 } as const
 
 /**
  * Plate around the lettering. Wide enough at the sides to clear the rule drawn
  * inside the plate's border with a texel of air to spare — see `PLATE_INSET`.
+ *
+ * Opened up when the name went to two lines. At the old margin a seven-glyph
+ * line ran to within a texel of the rule on both sides and the plate read as
+ * one the lettering had been squeezed onto.
  */
-const PLATE_MARGIN = { x: 5, y: 7 } as const
+const PLATE_MARGIN = { x: 7, y: 8 } as const
 
 /**
  * The plate itself, on the same grid — derived from where the letters actually
@@ -262,16 +282,22 @@ export function namePlateTexture(): THREE.CanvasTexture {
     /* Near-black and neutral, for maximum separation from the plate under it.
        The old lettering was a warm brown left over from a warm brown plate. */
     ctx.fillStyle = '#22252c'
-    let x = NAME_RECT.x
-    for (const letter of PLATE_WORD) {
-      const glyph = PLATE_GLYPHS[letter]
-      for (let row = 0; row < glyph.length; row++) {
-        for (let column = 0; column < PLATE_GLYPH.width; column++) {
-          if (glyph[row][column] === '1') ctx.fillRect(x + column, NAME_RECT.y + row, 1, 1)
+    PLATE_LINES.forEach((line, index) => {
+      // Each line centred in the block rather than flush left. Both are seven
+      // glyphs today, so this costs nothing and stops the plate going lopsided
+      // the moment the name is not two equal halves.
+      const top = NAME_RECT.y + index * (PLATE_GLYPH.height + PLATE_LEADING)
+      let x = NAME_RECT.x + Math.round((PLATE_TEXT.width - plateLineWidth(line.length)) / 2)
+      for (const letter of line) {
+        const glyph = PLATE_GLYPHS[letter]
+        for (let row = 0; row < glyph.length; row++) {
+          for (let column = 0; column < PLATE_GLYPH.width; column++) {
+            if (glyph[row][column] === '1') ctx.fillRect(x + column, top + row, 1, 1)
+          }
         }
+        x += PLATE_PITCH
       }
-      x += PLATE_PITCH
-    }
+    })
   })
 }
 
