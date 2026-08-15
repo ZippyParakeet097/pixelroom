@@ -63,7 +63,9 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 42px 24px 40px;
+  /* Tight at the top: the door's head is only about a hundred pixels down and
+     the sign has to clear it. */
+  padding: 20px 24px 40px;
   text-align: center;
   /* The surface underneath takes the click — the button is the only part of
      this layer that needs the pointer. */
@@ -77,27 +79,133 @@
   opacity: 0;
 }
 
-.doorway__kicker {
+/* The sign over the door ---------------------------------------------------
+   Two tubes on one baseline, and a faint mono strapline down by the button. */
+
+.doorway__title {
   margin: 0;
-  font-size: 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  /* Tight, so the strapline tucks under the big tube's tail rather than
+     standing off as a separate word. */
+  gap: 0 0.12em;
+  font-weight: normal;
+}
+
+.doorway__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.doorway__tail {
+  margin: 0;
+  font-size: 10px;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: var(--cave-cyan);
-  opacity: 0.7;
+  /* Indent by one tracking step: letter-spacing pads the right of the last
+     glyph too, so a centred tracked line sits visibly left of true centre. */
+  text-indent: 0.34em;
+  color: var(--cave-paper);
+  opacity: 0.26;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
 }
 
-/* The visible name lives on the plate on the door. This is for screen readers
-   and for anything that reads the page as a document. */
-.doorway__title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+/* The tube.
+
+   Monoline script on purpose. Neon is bent from one gauge of glass, so its
+   stroke never swells — a calligraphic face with thick and thin strokes reads
+   as painted lettering with a glow filter behind it, which is the usual tell.
+
+   Core is near-white, not cyan: an argon tube is white-hot down the middle and
+   the colour is the bloom around it. Coloured all the way through it goes flat
+   and turns into text with a shadow. */
+.doorway__sign {
+  font-family: 'Sacramento', 'Snell Roundhand', cursive;
+  font-size: clamp(44px, 6.6vw, 72px);
+  line-height: 1.06;
+  /* Tracked out a hair — the face joins its letters, and at this glow radius
+     neighbouring bloom fills the counters if they sit at their design fit. */
+  letter-spacing: 0.02em;
+  color: #e4fffa;
+  /* The white core is kept to a 2px halo. Given any more it swamps the cyan
+     layers stacked on it and the sign comes back grey — lit tube, no colour.
+     Everything past that is saturated and widening. */
+  text-shadow:
+    0 0 2px rgba(226, 255, 251, 0.98),
+    0 0 5px rgba(122, 240, 226, 0.98),
+    0 0 11px rgba(64, 226, 210, 1),
+    0 0 22px rgba(52, 214, 205, 0.95),
+    0 0 44px rgba(44, 190, 205, 0.85),
+    0 0 80px rgba(38, 160, 205, 0.7),
+    0 0 140px rgba(34, 130, 200, 0.55),
+    0 0 220px rgba(30, 110, 190, 0.4);
+  animation: neon-flicker 9s linear infinite;
+}
+
+/* The second tube. Smaller, and wound down rather than re-coloured — a thinner
+   run of the same gas is dimmer, not a different hue, and dropping its bloom
+   radius as well as its alpha is what keeps it reading behind the main tube
+   instead of beside it at equal weight.
+   Hung off the bottom right rather than set on the shared baseline: the flex
+   row aligns the two baselines and this drops it from there, so it tucks in
+   under the tail of the big tube the way a strapline is actually mounted. */
+.doorway__sign--sub {
+  font-size: clamp(15px, 2vw, 22px);
+  position: relative;
+  top: 0.62em;
+  color: #d8fbf6;
+  text-shadow:
+    0 0 2px rgba(226, 255, 251, 0.8),
+    0 0 5px rgba(122, 240, 226, 0.7),
+    0 0 12px rgba(64, 226, 210, 0.6),
+    0 0 26px rgba(52, 214, 205, 0.45),
+    0 0 50px rgba(44, 190, 205, 0.3),
+    0 0 90px rgba(38, 160, 205, 0.2);
+  /* Offset from the big tube's cycle so the two never stutter together —
+     one transformer per sign is the exception, not the rule. */
+  animation-delay: -3.7s;
+}
+
+/* Mostly on. Two clustered stutters and one slow sag per cycle — a steady sine
+   is a dimmer being turned, and an even strobe is a fault. Real tube noise is
+   rare and fast, so the gaps between events matter more than the events. */
+@keyframes neon-flicker {
+  0%,
+  8.4%,
+  9.4%,
+  11.2%,
+  100% {
+    opacity: 1;
+  }
+  8.8%,
+  10.6% {
+    opacity: 0.42;
+  }
+  9% {
+    opacity: 0.78;
+  }
+  62%,
+  66% {
+    opacity: 0.88;
+  }
+  64% {
+    opacity: 0.95;
+  }
+  71.6%,
+  72.4% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doorway__sign {
+    animation: none;
+  }
 }
 
 .doorway__enter {
@@ -108,9 +216,10 @@
   padding: 10px 22px;
   pointer-events: auto;
   cursor: pointer;
-  color: var(--cave-paper);
+  /* Paper at 0.62, not flat paper. Same reason as the mono title lines. */
+  color: rgba(232, 224, 208, 0.62);
   background: rgba(20, 16, 26, 0.72);
-  border: 2px solid rgba(232, 224, 208, 0.35);
+  border: 2px solid rgba(232, 224, 208, 0.22);
   /* Understated on purpose. The door is the invitation now; this is the
      keyboard's way in and a label for what the click does. */
   transition:

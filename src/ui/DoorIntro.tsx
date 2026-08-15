@@ -4,6 +4,7 @@ import { playDoorOpen, prefetchDoorOpen } from '@/audio/sfx'
 import { doorTimeline } from '@/scene/doorSequence'
 import { prefersReducedMotion } from '@/scene/motion'
 import { useRoomStore } from '@/state/useRoomStore'
+import '@fontsource/sacramento'
 import './door-intro.css'
 
 /** How long the fade takes when the visitor cuts the sequence short. */
@@ -266,19 +267,33 @@ export function DoorIntro() {
       )}
 
       <div className="doorway__chrome">
-        <p className="doorway__kicker">harshil prakash · a portfolio, arranged as a room</p>
-        {/* The name is on the plate on the door. This is here for the reader who
-            is getting the page as a document rather than as a picture. */}
-        <h1 className="doorway__title">Pixelroom</h1>
-        <button
-          ref={enterButton}
-          type="button"
-          className="doorway__enter"
-          onClick={open}
-          disabled={!Door}
-        >
-          {Door ? '▸ open the door' : '· · ·'}
-        </button>
+        {/* Was one dim mono line. Now the sign over the door: name small above,
+            the trade in neon under it. Nothing here is hidden from a reader
+            getting the page as a document — the three spans read as one
+            sentence in order. */}
+        {/* The name is on the plate on the door now, so the sign over it is the
+            place rather than the person — which is the way round a sign works.
+            The trade rides alongside in a smaller tube. */}
+        <h1 className="doorway__title">
+          <span className="doorway__sign">Pixelroom</span>
+          <span className="doorway__sign doorway__sign--sub">a portfolio</span>
+        </h1>
+        {/* The tail of the sentence, parked on the button rather than under the
+            sign. There is only about a door's-head of wall above the opening,
+            and a third line up there landed on the casing. Down here it reads
+            as the caption to the thing it is describing. */}
+        <div className="doorway__foot">
+          <p className="doorway__tail">arranged as a room</p>
+          <button
+            ref={enterButton}
+            type="button"
+            className="doorway__enter"
+            onClick={open}
+            disabled={!Door}
+          >
+            {Door ? '▸ open the door' : '· · ·'}
+          </button>
+        </div>
       </div>
 
       <div className="doorway__veil" style={veil} />
