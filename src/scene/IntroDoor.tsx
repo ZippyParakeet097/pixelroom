@@ -151,6 +151,22 @@ const STEEL = new THREE.Color('#a8b1c0')
 const PLATE_LEVEL = 0.74
 
 /**
+ * The sign over the door is a DOM layer — it glows on its own and the scene
+ * underneath knows nothing about it, which is what makes it read as a sticker
+ * over the render rather than an object in the shot.
+ *
+ * This is the tube's spill, and only that: enough cyan on the head of the
+ * casing and the top of the wall to say something up there is switched on.
+ *
+ * Stood well off the wall rather than close to it. A point light near a flat
+ * surface draws its own falloff on it — the first pass at this sat 0.6 out and
+ * put a legible cyan disc above the door, which reads as a spotlight aimed at
+ * the wall rather than as light coming off a sign. Backed away, the same wash
+ * arrives wide and edgeless, and the intensity comes down with it.
+ */
+const SIGN_GLOW = { at: [0, 2.86, 1.05] as Vec3, intensity: 1.7, distance: 3.8 } as const
+
+/**
  * The leaf: painted, not timber. Frame and panel — see the materials below.
  *
  * Authored much lighter than they read. The blit at the end of the pixelation
@@ -339,6 +355,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
   const behind = useRef<THREE.PointLight>(null)
   const fill = useRef<THREE.AmbientLight>(null)
   const spill = useRef<THREE.Group>(null)
+  const sign = useRef<THREE.PointLight>(null)
   /**
    * When the press landed, on the wall clock. Null until it does.
    *
@@ -426,6 +443,13 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     if (bolt.current) bolt.current.intensity = flash * 5
     // 3.6 not 2.4: holds old peak now AMBIENT is lower. Wider swing per strike.
     if (fill.current) fill.current.intensity = AMBIENT + flash * 3.6
+
+    // Goes out with the sign that casts it. The chrome fades over 240ms the
+    // moment the leaf starts moving, and a cyan wash still sitting on a wall
+    // whose sign has gone is the same sticker problem the other way round.
+    if (sign.current) {
+      sign.current.intensity = SIGN_GLOW.intensity * Math.max(0, 1 - open * 4)
+    }
 
     // The wedge a strike throws through the opening and across the floor on
     // this side, as wide as the leaf has left it. Driven by `flash`, because
@@ -517,6 +541,15 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           discharge miles up does not fall off across four metres of hallway,
           and a point light close enough to matter draws a soft circle on the
           wall that reads as somebody outside with a torch. */}
+      {/* The neon's spill. See `SIGN_GLOW`. */}
+      <pointLight
+        ref={sign}
+        position={SIGN_GLOW.at}
+        intensity={SIGN_GLOW.intensity}
+        distance={SIGN_GLOW.distance}
+        decay={2}
+        color={PALETTE.cyan}
+      />
       <directionalLight ref={bolt} position={[2.4, 4.5, 6]} intensity={0} color="#dbe6ff" />
       {/* And the same strike behind the wall, raking the reveal and the inner
           edge of the leaf — the only light the far side of this scene ever

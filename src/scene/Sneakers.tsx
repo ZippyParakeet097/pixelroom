@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
-import { Block, ContactShadow } from './primitives'
+import { Block } from './primitives'
 import { makeMaterial } from './palette'
 
 type Vec3 = [number, number, number]
@@ -301,14 +301,13 @@ const THROWN: readonly {
   cheek: number
   /** Spill a loose end over the tread and out onto the floor. */
   drape?: boolean
-  shadow: [number, number]
 }[] = [
   // Nearer the wall, standing, turned off square to it. Camera-side cheek.
-  { at: [0.98, 0, 0.42], yaw: 0.4, roll: 0.08, cheek: 1, shadow: [0.42, 0.42] },
+  { at: [0.98, 0, 0.42], yaw: 0.4, roll: 0.08, cheek: 1 },
   // A stride out and over, lying on its cheek where it stopped. Same +z cheek,
   // which the roll swings face up — laces lie across the top, not underneath.
   // Nothing up there can reach the floor on its own, hence the drape.
-  { at: [1.36, 0.062, 0.74], yaw: -0.5, roll: -1.4, cheek: 1, drape: true, shadow: [0.5, 0.42] },
+  { at: [1.36, 0.062, 0.74], yaw: -0.5, roll: -1.4, cheek: 1, drape: true },
 ]
 
 export function Sneakers() {
@@ -334,7 +333,7 @@ export function Sneakers() {
 
   return (
     <group>
-      {THROWN.map(({ at, yaw, roll, cheek, drape, shadow }) => (
+      {THROWN.map(({ at, yaw, roll, cheek, drape }) => (
         // Nested rather than one Euler: yaw outside, roll inside, so the roll
         // happens about the shoe's own length however it is pointing. Flat
         // XYZ order would roll it about the world axis and lay it on its nose.
@@ -353,9 +352,6 @@ export function Sneakers() {
               </group>
             </>
           )}
-          {/* Pinned to the floor rather than to the shoe, so the tipped one
-              does not carry its own shadow up into the air with it. */}
-          <ContactShadow position={[0, 0.008 - at[1], 0]} scale={shadow} opacity={0.75} />
         </group>
       ))}
     </group>
