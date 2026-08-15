@@ -5,6 +5,7 @@ import { doorTimeline } from '@/scene/doorSequence'
 import { prefersReducedMotion } from '@/scene/motion'
 import { useRoomStore } from '@/state/useRoomStore'
 import '@fontsource/sacramento'
+import { SignMoths } from './SignMoths'
 import './door-intro.css'
 
 /** How long the fade takes when the visitor cuts the sequence short. */
@@ -275,6 +276,7 @@ export function DoorIntro() {
             place rather than the person — which is the way round a sign works.
             The trade rides alongside in a smaller tube. */}
         <h1 className="doorway__title">
+          <SignMoths active={phase === 'closed'} />
           <span className="doorway__sign">Pixelroom</span>
           <span className="doorway__sign doorway__sign--sub">a portfolio</span>
         </h1>

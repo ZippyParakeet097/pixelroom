@@ -84,6 +84,7 @@
 
 .doorway__title {
   margin: 0;
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: baseline;
@@ -93,6 +94,50 @@
      standing off as a separate word. */
   gap: 0 0.12em;
   font-weight: normal;
+}
+
+/* Moths ---------------------------------------------------------------------
+   The box they fly in. Carries the sign's own font size and nothing else, so
+   the paths — written in em — widen with the lettering while the sprite itself
+   stays a fixed number of pixels. */
+.doorway__moths {
+  position: absolute;
+  inset: 0;
+  font-size: clamp(44px, 6.6vw, 72px);
+  pointer-events: none;
+}
+
+.doorway__moth {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background-repeat: no-repeat;
+  /* Authored at 11px and blown up by a whole number. Smoothed it is grey mush. */
+  image-rendering: pixelated;
+  animation: moth-flap 0.1s step-end infinite;
+}
+
+/* 0-1-2-1: three drawn frames, four beats. Held rather than eased — a tweened
+   background-position slides the sheet across the window instead of cutting. */
+@keyframes moth-flap {
+  0% {
+    background-position: 0 0;
+  }
+  25% {
+    background-position: calc(var(--moth-frame) * -1) 0;
+  }
+  50% {
+    background-position: calc(var(--moth-frame) * -2) 0;
+  }
+  75% {
+    background-position: calc(var(--moth-frame) * -1) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doorway__moth {
+    animation: none;
+  }
 }
 
 .doorway__foot {
