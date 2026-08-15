@@ -276,7 +276,7 @@ export function DoorIntro() {
             place rather than the person — which is the way round a sign works.
             The trade rides alongside in a smaller tube. */}
         <h1 className="doorway__title">
-          <SignMoths active={phase === 'closed'} />
+          <SignMoths active={phase === 'closed' || phase === 'opening'} />
           <span className="doorway__sign">Pixelroom</span>
           <span className="doorway__sign doorway__sign--sub">a portfolio</span>
         </h1>

@@ -166,6 +166,9 @@ const PLATE_LEVEL = 0.74
  */
 const SIGN_GLOW = { at: [0, 2.86, 1.05] as Vec3, intensity: 1.7, distance: 3.8 } as const
 
+/** The tube's own blue. Kept off PALETTE — the sign is the intro's, not the room's. */
+const SIGN_TINT = '#3a86ff'
+
 /**
  * The leaf: painted, not timber. Frame and panel — see the materials below.
  *
@@ -355,7 +358,6 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
   const behind = useRef<THREE.PointLight>(null)
   const fill = useRef<THREE.AmbientLight>(null)
   const spill = useRef<THREE.Group>(null)
-  const sign = useRef<THREE.PointLight>(null)
   /**
    * When the press landed, on the wall clock. Null until it does.
    *
@@ -444,12 +446,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // 3.6 not 2.4: holds old peak now AMBIENT is lower. Wider swing per strike.
     if (fill.current) fill.current.intensity = AMBIENT + flash * 3.6
 
-    // Goes out with the sign that casts it. The chrome fades over 240ms the
-    // moment the leaf starts moving, and a cyan wash still sitting on a wall
-    // whose sign has gone is the same sticker problem the other way round.
-    if (sign.current) {
-      sign.current.intensity = SIGN_GLOW.intensity * Math.max(0, 1 - open * 4)
-    }
+    // Sign and spill stay lit through the swing; the veil takes both.
 
     // The wedge a strike throws through the opening and across the floor on
     // this side, as wide as the leaf has left it. Driven by `flash`, because
@@ -541,14 +538,14 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           discharge miles up does not fall off across four metres of hallway,
           and a point light close enough to matter draws a soft circle on the
           wall that reads as somebody outside with a torch. */}
-      {/* The neon's spill. See `SIGN_GLOW`. */}
+      {/* The neon's spill. See `SIGN_GLOW`. Stays lit with the sign — the
+          veil, not the swing, takes it. */}
       <pointLight
-        ref={sign}
         position={SIGN_GLOW.at}
         intensity={SIGN_GLOW.intensity}
         distance={SIGN_GLOW.distance}
         decay={2}
-        color={PALETTE.cyan}
+        color={SIGN_TINT}
       />
       <directionalLight ref={bolt} position={[2.4, 4.5, 6]} intensity={0} color="#dbe6ff" />
       {/* And the same strike behind the wall, raking the reveal and the inner
@@ -808,8 +805,9 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
         </group>
       </group>
 
-      {/* Half the room's divisor, because this is a close-up: see `DOOR_GRID`. */}
-      <PixelationPass divisor={2} colorLevels={26} vignette={0.5} />
+      {/* Under the room's 4 because this is a close-up. `DOOR_GRID` scales with
+          it — raise one without the other and the plate lettering sheds rows. */}
+      <PixelationPass divisor={3} colorLevels={26} vignette={0.5} />
     </>
   )
 }

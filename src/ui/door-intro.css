@@ -73,7 +73,9 @@
   transition: opacity 240ms ease;
 }
 
-.doorway--opening .doorway__chrome,
+/* The press spends the button, so the foot goes at once. The sign stays lit
+   through the swing — the veil paints over it, so its own fade runs covered. */
+.doorway--opening .doorway__foot,
 .doorway--black .doorway__chrome,
 .doorway--revealing .doorway__chrome {
   opacity: 0;
@@ -145,6 +147,7 @@
   flex-direction: column;
   align-items: center;
   gap: 14px;
+  transition: opacity 240ms ease;
 }
 
 .doorway__tail {
@@ -176,19 +179,18 @@
   /* Tracked out a hair — the face joins its letters, and at this glow radius
      neighbouring bloom fills the counters if they sit at their design fit. */
   letter-spacing: 0.02em;
-  color: #e4fffa;
-  /* The white core is kept to a 2px halo. Given any more it swamps the cyan
-     layers stacked on it and the sign comes back grey — lit tube, no colour.
-     Everything past that is saturated and widening. */
+  color: #eaf4ff;
+  /* White core held to a 2px halo — any more and it swamps the blue stacked on
+     it and the sign comes back grey. Past that, saturated and widening. */
   text-shadow:
-    0 0 2px rgba(226, 255, 251, 0.98),
-    0 0 5px rgba(122, 240, 226, 0.98),
-    0 0 11px rgba(64, 226, 210, 1),
-    0 0 22px rgba(52, 214, 205, 0.95),
-    0 0 44px rgba(44, 190, 205, 0.85),
-    0 0 80px rgba(38, 160, 205, 0.7),
-    0 0 140px rgba(34, 130, 200, 0.55),
-    0 0 220px rgba(30, 110, 190, 0.4);
+    0 0 2px rgba(232, 244, 255, 0.98),
+    0 0 5px rgba(150, 205, 255, 0.98),
+    0 0 11px rgba(74, 160, 255, 1),
+    0 0 22px rgba(46, 134, 255, 0.95),
+    0 0 44px rgba(28, 112, 250, 0.85),
+    0 0 80px rgba(20, 92, 240, 0.7),
+    0 0 140px rgba(16, 74, 225, 0.55),
+    0 0 220px rgba(14, 62, 205, 0.4);
   animation: neon-flicker 9s linear infinite;
 }
 
@@ -203,14 +205,14 @@
   font-size: clamp(15px, 2vw, 22px);
   position: relative;
   top: 0.62em;
-  color: #d8fbf6;
+  color: #dcebff;
   text-shadow:
-    0 0 2px rgba(226, 255, 251, 0.8),
-    0 0 5px rgba(122, 240, 226, 0.7),
-    0 0 12px rgba(64, 226, 210, 0.6),
-    0 0 26px rgba(52, 214, 205, 0.45),
-    0 0 50px rgba(44, 190, 205, 0.3),
-    0 0 90px rgba(38, 160, 205, 0.2);
+    0 0 2px rgba(232, 244, 255, 0.8),
+    0 0 5px rgba(150, 205, 255, 0.7),
+    0 0 12px rgba(74, 160, 255, 0.6),
+    0 0 26px rgba(46, 134, 255, 0.45),
+    0 0 50px rgba(28, 112, 250, 0.3),
+    0 0 90px rgba(20, 92, 240, 0.2);
   /* Offset from the big tube's cycle so the two never stutter together —
      one transformer per sign is the exception, not the rule. */
   animation-delay: -3.7s;
