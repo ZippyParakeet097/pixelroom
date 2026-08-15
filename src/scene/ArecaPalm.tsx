@@ -47,14 +47,17 @@ const DEFAULT_SPOT: Vec3 = [-1.35, 0, 0.42]
  * yellow-green, and authored at that hue it came back neon — the brightest
  * thing on screen by a mile, pulling the eye clean off the handle. Two plants
  * flanking a door get to be furniture, not the subject.
+ *
+ * All scaled x0.72 together. Uniform, so three greens keep their spacing and
+ * posterise still lands three bands, not two.
  */
-const POT = '#8f7263'
-const POT_RIM = '#9e8070'
-const SOIL = '#463a30'
-const CANE = '#7f8a63'
-const LEAF_LIGHT = '#9aab84'
-const LEAF = '#83956f'
-const LEAF_DARK = '#65775a'
+const POT = '#675247'
+const POT_RIM = '#725c51'
+const SOIL = '#3c3129'
+const CANE = '#5b6347'
+const LEAF_LIGHT = '#6f7b5f'
+const LEAF = '#5e6b50'
+const LEAF_DARK = '#495641'
 
 /** Pot: squat, so the plant is the object and not the container. */
 const POT_TIERS: readonly (readonly [number, number, number])[] = [

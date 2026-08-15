@@ -23,10 +23,13 @@ import { Block } from './primitives'
  *
  * Coir, and warmer than the floor it lies on rather than darker. A dark mat on
  * a dark floor is a hole; this has to read as a thing placed there.
+ *
+ * All scaled x0.72 with the rest of the outside. Still above the floor it lies
+ * on — that gap is the whole job, and it survives the scale.
  */
-const BORDER = '#6d5b43'
-const FIELD = '#9a8464'
-const RIB = '#82704f'
+const BORDER = '#4e4130'
+const FIELD = '#6f5f48'
+const RIB = '#5e5039'
 
 /**
  * Wider than a real mat for the opening it serves, and that is a framing call

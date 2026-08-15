@@ -133,10 +133,22 @@ const LOOK_END: Vec3 = [0, 1.18, -6]
 
 const HOVER_SPEED = 9
 
-/** The scene's base light level, lifted for the length of a strike. */
-const AMBIENT = 3.4
+/**
+ * Base light level, lifted for length of strike.
+ *
+ * Down from 3.4. Dark floor out here, so a bright thing has somewhere to come
+ * from. Strike lift re-scaled to hold old peak — see `fill` in frame loop.
+ */
+const AMBIENT = 2.2
 
-const STEEL = new THREE.Color('#c4cede')
+const STEEL = new THREE.Color('#a8b1c0')
+
+/**
+ * Nameplate's distance under white. Plate + lettering are white-with-map, no
+ * authored colour to pull down, so dim via the frame loop's scalar instead.
+ * Still brightest thing in shot — it is the one bit of text out here.
+ */
+const PLATE_LEVEL = 0.74
 
 /**
  * The leaf: painted, not timber. Frame and panel — see the materials below.
@@ -257,18 +269,18 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     () => ({
       /* Authored light, like everything else here — pass squares it on the way
          out, so a small nudge up top is a big one on screen. */
-      wall: makeMaterial('#4a3f5e'),
+      wall: makeMaterial('#3f3650'),
       /* A slim painted casing, a shade lighter than the wall and standing a
          couple of centimetres proud. Tried the modern thing of a dark shadow
          gap first: on a wall this dark it is invisible, and the leaf reads as a
          rectangle of timber floating in a flat field with nothing to give the
          doorway a size. */
-      casing: makeMaterial('#969ab1'),
+      casing: makeMaterial('#7b7e91'),
       /* The reveal, a shade under the casing it turns in from. Same board,
          seen edge-on and away from the key, so it cannot be the same value on
          screen without reading as a separate lighter thing stuck inside the
          opening. */
-      lining: makeMaterial('#7c8098'),
+      lining: makeMaterial('#66697d'),
       floor: makeMaterial(PALETTE.floorAlt),
       threshold: makeMaterial(PALETTE.ink),
       /* No map on either. Two passes at a painted figure into the leaf — plank
@@ -412,7 +424,8 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     // under a door looks like — not what a storm does to a hallway. It also
     // lands on the face of the leaf, which is the one moving thing in the shot.
     if (bolt.current) bolt.current.intensity = flash * 5
-    if (fill.current) fill.current.intensity = AMBIENT + flash * 2.4
+    // 3.6 not 2.4: holds old peak now AMBIENT is lower. Wider swing per strike.
+    if (fill.current) fill.current.intensity = AMBIENT + flash * 3.6
 
     // The wedge a strike throws through the opening and across the floor on
     // this side, as wide as the leaf has left it. Driven by `flash`, because
@@ -447,8 +460,8 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
     const shade = 1 - Math.max(0, open - 0.7) * 1.4
     materials.slab.color.copy(LEAF).multiplyScalar(shade)
     materials.panel.color.copy(PANEL).multiplyScalar(shade)
-    materials.engraving.color.setScalar(shade)
-    materials.plate.color.setScalar(shade)
+    materials.engraving.color.setScalar(shade * PLATE_LEVEL)
+    materials.plate.color.setScalar(shade * PLATE_LEVEL)
     materials.steel.color.copy(STEEL).multiplyScalar(shade)
 
     const goal = hovered.current && !opening ? 1 : 0
@@ -488,7 +501,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           by wherever they have been standing, and there is nothing on the other
           side to light it but the weather. Warm, because a cool key on a red
           timber takes the red straight out of it. */}
-      <directionalLight position={[3.5, 5, 7]} intensity={4.8} color="#e6d7c2" />
+      <directionalLight position={[3.5, 5, 7]} intensity={3.4} color="#e6d7c2" />
       {/* The kicker, and it exists for one object.
 
           Side on from the right and almost level, which is very nearly useless
@@ -499,7 +512,7 @@ function DoorScene({ onOpen }: { onOpen: () => void }) {
           leaf over exactly the span where the key is falling off it, and the
           one thing that moves stays lit the whole way round instead of sinking
           into the wall behind it. */}
-      <directionalLight position={[9, 2.4, 0.5]} intensity={3.2} color="#d8c9b4" />
+      <directionalLight position={[9, 2.4, 0.5]} intensity={2.4} color="#d8c9b4" />
       {/* The strike, out here as sky. Directional rather than a point: a
           discharge miles up does not fall off across four metres of hallway,
           and a point light close enough to matter draws a soft circle on the

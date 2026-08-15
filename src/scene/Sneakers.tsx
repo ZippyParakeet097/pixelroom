@@ -28,13 +28,17 @@ type Pt = [number, number]
  * the floor rather than against it. The soles are the lightest thing below
  * waist height, which is what stops two small dark lumps from disappearing
  * into it.
+ *
+ * All scaled x0.8 with the rest of the outside. Not further: tried x0.7 and
+ * the sole line went with it, which is exactly the failure the paragraph above
+ * is about — pair came back as two brown lumps by the wall.
  */
-const SOLE = '#e0dacd'
-const RUBBER = '#c6c0b1'
-const UPPER = '#c2908c'
-const UPPER_DARK = '#875956'
-const PATCH = '#e0d6c4'
-const LACE = '#e6e0d3'
+const SOLE = '#b3aea4'
+const RUBBER = '#9e9a8e'
+const UPPER = '#9b7370'
+const UPPER_DARK = '#6c4745'
+const PATCH = '#b3ab9d'
+const LACE = '#b8b3a9'
 
 /**
  * Roughly a size ten, in metres, and a size up from life. Origin sits under
